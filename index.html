@@ -28,61 +28,26 @@ select{font:inherit;padding:6px 10px;border-radius:10px;border:1px solid var(--b
 .qa details{border-top:1px solid var(--bd);padding:6px 0}.qa details:first-child{border-top:0}.qa summary{cursor:pointer}.qa p{margin:6px 0 4px;font-size:.95rem}
 .empty{padding:22px;text-align:center;color:var(--mu);background:var(--card);border:1px dashed var(--bd);border-radius:14px}
 .foot{margin-top:30px;font-size:.82rem;color:var(--mu)}
+/* 其他 */
+.menu{margin:6px 0 2px;font-size:.95rem}.menu b{color:var(--ac)}.n.ph2{border-color:var(--wa)}.tag.ok2{border-color:var(--ok);color:var(--ok)}.foot a{color:var(--mu)}
+.admin-btn {display: inline-block; background-color: var(--ok); color: white; padding: 6px 16px; border-radius: 99px; text-decoration: none; font-size: 0.9rem; margin-top: 6px; margin-bottom: 6px;}
+.admin-btn:hover {opacity: 0.9;}
 </style></head><body>
 <div class="ban"><img src="img/banner.jpg" alt="115東門國小學生家長會"></div>
 <div class="w">
 <h1>營養午餐試菜紀錄 🍱</h1>
 <p class="mu">家長代表每天到校試菜，如實記錄味道、口感與照片，並把家長的疑問轉達給學校營養師，讓大家知道孩子每天吃的午餐。</p>
+
 <a class="ext" href="https://fatraceschool.k12ea.gov.tw/frontend/search.html?school=353606" target="_blank" rel="noopener noreferrer"><div><b>教育部校園食材登錄平台 2.0</b><br><span class="mu">查詢東門國小每日官方菜單、食材與來源</span></div><span class="go">前往查詢 ↗</span></a>
+
 <div class="bar"><select id="sem" aria-label="學期"></select><span class="mu" id="semsum"></span></div>
 <div class="tabs" id="tabs"></div>
-<div id="view"></div>
-<p class="foot">試菜代表僅顯示班級，不公開姓名；照片只拍餐點。內容為家長代表的個人感受與家長會整理的摘要，非官方檢驗結果。官方菜單與食材來源請以教育部校園食材登錄平台為準。</p>
+<div id="view"><div class="empty">資料載入中…</div></div>
+
+<p class="foot">試菜代表僅顯示年級，不公開真實姓名；照片只拍餐點。內容為家長代表的個人感受與家長會整理的摘要，非官方檢驗結果。官方菜單與食材來源請以教育部校園食材登錄平台為準。<br><a href="admin.html" rel="nofollow">家代填寫入口</a></p>
 </div>
-<script>
-let DATA={semesters:[]};
-const wk=["日","一","二","三","四","五","六"];
-const E=s=>String(s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-const lab=d=>{const[y,m,x]=d.split("-");return `${+m}/${+x}（${wk[new Date(y,m-1,x).getDay()]}）`};
-const idOf=d=>"d-"+d.slice(5).replace("-","");
-let si=0,mo=null;
-const S=()=>DATA.semesters[si];
-const mDays=m=>S().days.filter(x=>x.d.slice(5,7)==m);
-const mQa=m=>S().qa.filter(x=>x.m==m);
-const has=m=>mDays(m).length||mQa(m).length;
-function pick(){const h=(location.hash||"").slice(1);let m=null;
- if(/^m-\d\d$/.test(h))m=h.slice(2);else if(/^d-\d{4}$/.test(h))m=h.slice(2,4);
- if(!m||!S().months.includes(m)){const ms=S().months.filter(has);m=ms.length?ms[ms.length-1]:S().months[0]}
- mo=m;return h}
-function render(){
- const s=S();
- document.getElementById("semsum").textContent=`共 ${s.days.length} 天試菜紀錄、${s.days.reduce((a,x)=>a+x.reps.length,0)} 份代表回報、${s.qa.length} 則反映事項`;
- document.getElementById("tabs").innerHTML=s.months.map(m=>`<button data-m="${m}" class="${m==mo?"on":""} ${has(m)?"":"em"}">${+m}月</button>`).join("");
- const D=mDays(mo),Q=mQa(mo);
- let h="";
- if(!D.length&&!Q.length)h=`<div class="empty">${+mo}月尚無紀錄</div>`;
- else{
-  h+=`<div class="st"><div><b>${D.length}</b>試菜天數</div><div><b>${D.reduce((a,x)=>a+x.reps.length,0)}</b>代表回報</div><div><b>${Q.length}</b>反映與回覆</div></div>`;
-  if(D.length)h+=`<h2>${+mo}月日曆</h2><div class="cal">`+D.map(x=>{const t=[`<span class="tag">${x.reps.length}位回報</span>`];
-   if(x.ph.length)t.push('<span class="tag">有照片</span>');
-   const qs=Q.filter(q=>q.d==x.d);
-   if(x.n.some(n=>n.t=="追蹤中")||qs.some(q=>q.s=="追蹤中"))t.push('<span class="tag w2">追蹤中</span>');
-   if(qs.some(q=>q.s=="已回覆"))t.push('<span class="tag">已回覆</span>');
-   if(x.n.some(n=>n.t=="營養師回覆"))t.push('<span class="tag">已回覆</span>');
-   return `<a href="#${idOf(x.d)}"><b>${lab(x.d)}</b>${t.join("")}</a>`}).join("")+`</div>`;
-  if(Q.length)h+=`<h2>家長反映與校方回覆</h2><div class="qa">`+Q.map(q=>`<details><summary><b>${E(q.t)}</b> ${q.s?`<span class="tag ${q.s=="追蹤中"?"w2":""}">${E(q.s)}</span>`:""}</summary>${q.x?`<p>${E(q.x)}</p>`:""}${q.q?`<p><b>家長反映</b>　${E(q.q)}</p>`:""}${q.a?`<p><b>營養師／學校回覆</b>　${E(q.a)}</p>`:(q.q?`<p class="mu">尚待回覆</p>`:"")}</details>`).join("")+`</div>`;
-  if(D.length)h+=`<h2>每日試菜紀錄</h2>`+[...D].reverse().map(x=>`<section class="day" id="${idOf(x.d)}"><h3>${lab(x.d)}</h3>
-${x.ph.length?`<div class="ph">${x.ph.map(p=>`<img src="${p}" alt="試菜餐點照片" loading="lazy">`).join("")}</div>`:""}
-${x.reps.map(r=>`<div class="rep"><strong>${E(r.c.endsWith("代表")?r.c:r.c+"代表")}</strong><ul>${r.l.map(l=>`<li>${E(l)}</li>`).join("")}</ul></div>`).join("")}
-${x.n.map(n=>`<div class="n ${n.t=="營養師回覆"?"ok":""}"><b>${E(n.t)}</b>　${E(n.x)}</div>`).join("")}</section>`).join("");
- }
- document.getElementById("view").innerHTML=h;
-}
-function init(){
-document.getElementById("sem").innerHTML=DATA.semesters.map((s,i)=>`<option value="${i}">${E(s.name)}</option>`).join("");
-document.getElementById("sem").onchange=e=>{si=+e.target.value;location.hash="";pick();render()};
-document.getElementById("tabs").onclick=e=>{const b=e.target.closest("button");if(b)location.hash="m-"+b.dataset.m};
-function route(){const h=pick();render();if(/^d-/.test(h)){const el=document.getElementById(h);if(el)el.scrollIntoView()}}
-addEventListener("hashchange",route);route();}
-fetch("data/semesters.json").then(r=>r.json()).then(ids=>Promise.all(ids.map(i=>fetch("data/"+i+".json").then(r=>r.json())))).then(ss=>{DATA.semesters=ss;init()}).catch(()=>{document.getElementById("view").innerHTML='<div class="empty">資料載入失敗，請重新整理，或確認 data 資料夾已上傳。</div>'});
-</script></body></html>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/main.js"></script>
+</body></html>
