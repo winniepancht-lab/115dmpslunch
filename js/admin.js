@@ -1,5 +1,5 @@
 // 替換為您的 Google Apps Script Web App URL (步驟 2)
-const GAS_URL = 'https://script.google.com/macros/s/AKfycbw1Jft9XsWLlV3c6SbV0DKGRsgR8QE2sbrYi70j6mxi3nWPLmMsN2y67Owg5Lu8y8b_/exec';
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx8KcPuR-loKV9itJsg20WO-Sdy1Yj-BfbS78hV08lCBwT_0qpi_oiBfnKx1d-t1WVb/exec';
 
 // 設定今日日期為預設值
 document.getElementById('date').valueAsDate = new Date();
