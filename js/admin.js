@@ -59,12 +59,15 @@ $("b1").onclick = async () => {
 // 輪值提示：今天排了哪些班級、誰已回報
 let sched = {};
 async function showRota() {
-  const d = $("date").value, box = $("rota"); if (!d || !$("key").value.trim()) { box.textContent = ""; return; }
+  const d = $("date").value, box = $("rota"); box.textContent = ""; if (!d || !$("key").value.trim()) return;
   try {
-    if (!sched[d]) { const r = await (await fetch(`${C.GAS_URL}?action=schedule&date=${d}&key=${encodeURIComponent($("key").value.trim())}`)).json(); if (r.status !== "success") { box.textContent = ""; return; } sched[d] = r.rows.map(x => x[1]); }
-    const done = new Set((await H.fetchCsv(C.DATA_URL, true)).filter(r => H.norm(r["日期"]) == d).map(r => String(r["班級"]).trim()));
-    box.innerHTML = sched[d].length ? "📅 今日輪值（點一下自動填班級）：<div class='rota'>" + sched[d].map(c => { const dg = c.match(/\d{3}/)[0]; return `<button type="button" class="g ${done.has(dg) ? "done" : ""}" data-c="${dg}">${done.has(dg) ? "✓ " : ""}${c}</button>`; }).join("") + "</div>" : "";
-  } catch (e) { box.textContent = ""; }
+    if (!sched[d]) { const r = await (await fetch(`${C.GAS_URL}?action=schedule&date=${d}&key=${encodeURIComponent($("key").value.trim())}`)).json();
+      if (r.status !== "success") throw new Error(r.message || "失敗"); sched[d] = r.rows.map(x => x[1]); }
+  } catch (e) { box.textContent = "（輪值資料讀取失敗：" + e.message + "）"; return; }
+  if (!sched[d].length) { box.textContent = "（這天沒有匯入輪值資料）"; return; }
+  const draw = done => box.innerHTML = "📅 今日輪值（點一下自動填班級）：<div class='rota'>" + sched[d].map(c => { const dg = (c.match(/\d{3}/) || [c])[0]; return `<button type="button" class="g ${done.has(dg) ? "done" : ""}" data-c="${dg}">${done.has(dg) ? "✓ " : ""}${c}</button>`; }).join("") + "</div>";
+  draw(new Set());   // 先顯示輪值班級，再嘗試標記已回報
+  try { draw(new Set((await H.fetchCsv(C.DATA_URL, true)).filter(r => H.norm(r["日期"]) == d).map(r => String(r["班級"]).trim()))); } catch (e) {}
 }
 $("rota").onclick = e => { const b = e.target.closest("button"); if (b) $("cls").value = b.dataset.c; };
 $("date").onchange = showRota; $("key").onchange = () => { sched = {}; showRota(); }; showRota();
@@ -72,7 +75,8 @@ $("date").onchange = showRota; $("key").onchange = () => { sched = {}; showRota(
 // ---------- 反映 ----------
 $("b2").onclick = async () => {
   if (!$("qt").value.trim()) return alert("請填標題");
-  const ok = await post({ type: "qa", date: $("qd").value, title: $("qt").value.trim(), summary: $("qs").value.trim(), reply: $("qr").value.trim(), photos: b64s("qp") }, $("b2"), $("m2"), "✅ 已送出！");
+  const n = pics.qp.length, ok = await post({ type: "qa", date: $("qd").value, title: $("qt").value.trim(), summary: $("qs").value.trim(), reply: $("qr").value.trim(), photos: b64s("qp") }, $("b2"), $("m2"), "✅ 已送出！");
+  if (ok && n) { if (ok.photos === n) $("m2").textContent = `✅ 已送出！（照片 ${n} 張）`; else { $("m2").className = "msg er"; $("m2").textContent = "⚠️ 文字已送出，但照片沒有被儲存：Apps Script 可能還不是最新版，請確認部署為「新版本」"; } }
   if (ok) { $("qt").value = $("qs").value = $("qr").value = ""; clr("qp", "qth"); loadPend(); }
 };
 $("b3").onclick = async () => {
