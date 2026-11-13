@@ -1,28 +1,120 @@
-/* css/style.css from dmpaslunch-v2.zip */
-:root{--bg:#fff8ef;--card:#fff;--tx:#3a3748;--mu:#8a869a;--ac:#3f7ddb;--ac2:#e8f1ff;--rd:#ef6f5e;--bd:#f0e3d2;--pk:#ffe3ee;--mt:#dcf5e6;--bt:#fff3c4;--pc:#ffe7d9;--sk:#dff0ff;color-scheme:light;box-sizing:border-box}
-*{box-sizing:inherit}html{scroll-behavior:smooth}
-body{margin:0;color:var(--tx);font:16px/1.7 "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif;background-color:var(--bg);background-image:radial-gradient(#ffe9cf 1.6px,transparent 1.6px);background-size:22px 22px}
-.w{max-width:900px;margin:0 auto;padding:0 14px 56px}
-.ban{background:#fff;border-radius:0 0 24px 24px;overflow:hidden;border:2px solid var(--bd);border-top:0;box-shadow:0 6px 18px #f3d9b855}.ban img{display:block;width:100%;height:auto}
-h1{font-size:1.55rem;margin:18px 0 4px;color:var(--ac)}h1 small{font-size:.9rem;color:var(--mu);font-weight:400}
-h2{font-size:1.12rem;margin:28px 0 10px;display:flex;align-items:center;gap:8px}h2:before{content:"";width:10px;height:22px;border-radius:6px;background:var(--rd)}
-.mu{color:var(--mu);font-size:.9rem}a{color:var(--ac)}
-.ext{display:flex;gap:12px;align-items:center;margin:16px 0;padding:12px 16px;background:var(--sk);border:2px solid #b9dcff;border-radius:20px;text-decoration:none;color:var(--tx)}
-.ext b{color:var(--ac)}.go{margin-left:auto;white-space:nowrap;background:var(--ac);color:#fff;border-radius:99px;padding:3px 14px;font-size:.9rem}
-.bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:14px 0 8px}
-select,input,textarea{font:inherit;color:var(--tx); border:2px solid var(--bd); border-radius:12px; padding:6px 12px; background:#fff;}
-input[type="date"], input[type="number"], input[type="password"], input[type="url"], input[type="text"] { width: 100%; display: block; margin-top:4px;}
-.btn{display:inline-block; font-family:inherit; font-size:1rem; font-weight:700; text-align:center; cursor:pointer; border-radius:99px; padding:8px 24px; border:0; transition:opacity 0.2s;}
-.btn-primary{background:var(--ac); color:#fff;} .btn-primary:hover{opacity:0.9;}
-.btn-outline{background:transparent; border:2px solid var(--ac); color:var(--ac);}
-.btn-success{background:#1d6b43; color:#fff;}
-.btn-danger{background:var(--rd); color:#fff;}
-.form-group{margin-bottom: 16px;}
-.form-group label{font-weight:700; font-size:0.95rem; color:var(--tx);}
-.form-group .hint{display:block; font-size:0.8rem; color:var(--mu); margin-top:2px;}
-.badge{background:var(--ac);color:#fff;border-radius:14px;padding:2px 12px;font-weight:700;line-height:1.5;text-align:center}.badge small{display:block;font-size:.7rem;font-weight:400;opacity:.9}
-/* 框架區塊 */
-section.f{background:#fff;border:2px solid var(--bd);border-radius:22px;padding:16px 20px;margin:14px 0;box-shadow:0 4px 12px #f3d9b833}
-.tabs{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 8px;scrollbar-width:none}.tabs::-webkit-scrollbar{display:none}
-.tabs button{flex:none;font:inherit;border:2px solid var(--bd);background:#fff;color:var(--tx);border-radius:99px;padding:5px 18px;cursor:pointer;transition:transform .15s}
-.tabs button.on{background:var(--ac);border-color:var(--ac);color:#fff;box-shadow:0 4px 10px #3f7ddb44}.tabs button.em{opacity:.45}
+/* ===== 基礎設定 ===== */
+:root {
+  --mt: #fbf7e8;      /* 溫暖底色 */
+  --bg: #ffffff;      /* 區塊背景 */
+  --tx: #2c3e50;      /* 主文字色 */
+  --mu: #7f8c8d;      /* 次要文字 */
+  --ac: #d35400;      /* 主強調色 (橘紅) */
+  --ac-h: #e67e22;    /* 強調色 Hover */
+  --bd: #e0e0e0;      /* 淺灰邊框 */
+  --rd: 16px;         /* 圓角 */
+  --sh: 0 4px 15px rgba(0, 0, 0, 0.05); /* 陰影 */
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; padding: 0;
+  font-family: "SF Pro Text", "Helvetica Neue", "Microsoft JhengHei", sans-serif;
+  background-color: var(--mt);
+  color: var(--tx);
+  line-height: 1.6;
+}
+
+.w { max-width: 800px; margin: 0 auto; padding: 20px; }
+a { color: var(--ac); text-decoration: none; font-weight: bold; }
+a:hover { text-decoration: underline; }
+h1, h2, h3 { margin: 0; color: #2c3e50; }
+.mu { color: var(--mu); font-size: 0.9rem; }
+
+/* ===== 標題區塊 ===== */
+header { margin-bottom: 24px; text-align: center; }
+header h1 { font-size: 1.8rem; margin-bottom: 8px; }
+header h1 small { display: block; font-size: 1rem; color: var(--mu); margin-top: 4px; font-weight: normal; }
+
+/* ===== 卡片 & 區塊 ===== */
+section.f, .card {
+  background: var(--bg);
+  border: 1px solid var(--bd);
+  border-radius: var(--rd);
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: var(--sh);
+}
+
+.card h2 { font-size: 1.3rem; margin-bottom: 12px; border-bottom: 2px solid var(--mt); padding-bottom: 8px; }
+
+/* ===== 表單元件 ===== */
+label { display: block; font-weight: bold; margin: 16px 0 6px 0; font-size: 0.95rem; }
+input[type="text"], input[type="date"], input[type="password"], textarea, select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: #fafafa;
+  transition: border-color 0.2s;
+}
+input:focus, textarea:focus, select:focus {
+  border-color: var(--ac);
+  outline: none;
+  background: #fff;
+}
+textarea { min-height: 120px; resize: vertical; }
+
+/* ===== 按鈕 ===== */
+button, .btn {
+  background-color: var(--ac);
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 10px 24px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  display: inline-block;
+  margin-top: 16px;
+}
+button:hover, .btn:hover { background-color: var(--ac-h); }
+button:active { transform: scale(0.98); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+button.g {
+  background-color: #fff;
+  color: var(--ac);
+  border: 1px solid var(--ac);
+  padding: 6px 16px;
+  font-size: 0.9rem;
+  margin-top: 8px;
+  margin-right: 8px;
+}
+button.g:hover { background-color: var(--mt); }
+
+/* ===== 圖片預覽 ===== */
+.th { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+.th img { height: 100px; border-radius: 8px; object-fit: cover; border: 1px solid var(--bd); }
+
+/* ===== 狀態訊息 ===== */
+.msg { margin-top: 12px; font-weight: bold; font-size: 0.95rem; }
+.ok { color: #27ae60; }
+.er { color: #c0392b; }
+
+/* ===== 排班表按鈕 ===== */
+.rota { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.rota button { margin-top: 0; padding: 6px 14px; }
+.rota .done {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-color: #a5d6a7;
+}
+
+/* ===== 佈局輔助 ===== */
+.row { display: flex; gap: 16px; flex-wrap: wrap; }
+.row > div { flex: 1; min-width: 150px; }
+
+details summary { cursor: pointer; font-weight: bold; color: var(--tx); padding: 8px 0; }
+details p { margin-top: 8px; }
+
+/* 幹部專用區塊預設隱藏 */
+#superAdminPanel { display: none; background-color: #fff0f0; border-color: #ffcccc; }
+#superAdminPanel h2 { color: #c0392b; border-bottom-color: #ffcccc; }
