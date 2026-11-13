@@ -4,6 +4,7 @@ const today = new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOS
 $("date").value = $("qd").value = today; $("key").value = localStorage.getItem("dmpa_key") || "";
 
 // ---------- 排班表解析（只取日期＋班級，姓名不外送）----------
+//PARSE-START
 const SKIP = new Set(["試菜人員", "家長：", "家長:", "家長", "行政代表", "家長代表", "試吃意見", "輪值時間", "人員"]);
 function toIso(v) {
   if (typeof v === "number" && v > 40000 && v < 60000) return new Date(Math.round((v - 25569) * 864e5)).toISOString().slice(0, 10);
@@ -20,6 +21,7 @@ function parseSchedule(sheets, roster) {
       if (map[n]) { const c = [...map[n]].join("/"), k = cur + c; if (!seen.has(k)) { seen.add(k); rows.push([cur, c, "家長"]); } } else miss.add(n); } }); });
   return { rows, missing: [...miss] };
 }
+//PARSE-END
 
 // ---------- 照片 ----------
 function shrink(f) { return new Promise(res => {
@@ -31,7 +33,7 @@ function shrink(f) { return new Promise(res => {
 const pics = {};
 function picker(inp, th, msg) { pics[inp] = []; $(inp).onchange = async e => {
   pics[inp] = []; $(th).innerHTML = "";
-  for (const f of e.target.files) { const p = await shrink(f); if (p) pics[inp].push(p); else $(msg).textContent = "有照片格式無法讀取，請改選 JPG/PNG"; }
+  for (const f of e.target.files) { const p = await shrink(f); if (p) pics[inp].push(p); else $(msg).textContent = "有照片格式無法讀取（例如 HEIC），請改選 JPG/PNG"; }
   $(th).innerHTML = pics[inp].map(p => `<img src="${p.u}" alt="">`).join(""); }; }
 picker("ph", "th", "m1"); picker("mp", "mth", "m1"); picker("qp", "qth", "m2");
 const b64s = k => pics[k].map(p => p.b64), clr = (k, th) => { pics[k] = []; $(k).value = ""; $(th).innerHTML = ""; };
@@ -43,29 +45,8 @@ async function post(payload, btn, msg, ok) {
     const r = await fetch(C.GAS_URL, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
     const d = await r.json(); if (d.status !== "success") throw new Error(d.message || "失敗");
     msg.className = "msg ok"; msg.textContent = ok; return d;
-  } catch (e) { msg.className = "msg er"; msg.textContent = "⚠️ " + (e.message === "Failed to fetch" ? "無法確認是否成功，請先到前台或試算表確認" : e.message); return false;
+  } catch (e) { msg.className = "msg er"; msg.textContent = "⚠️ " + (e.message === "Failed to fetch" ? "無法確認是否成功，請先到前台或試算表確認，避免重複送出" : e.message); return false;
   } finally { btn.disabled = false; }
-}
-
-// ---------- 午餐 API 自動帶入 ----------
-async function fetchMenuFromAPI(dateStr) {
-    if (!dateStr) return;
-    try {
-        const targetUrl = 'https://fatraceschool.k12ea.gov.tw/offered/meal?SchoolId=353606&period=YYYY-MM-DD&KitchenId=all&MenuType=1'.replace('YYYY-MM-DD', dateStr);
-        $("menu").placeholder = "正在從校園食材登錄平台讀取資料...";
-        const response = await fetch(targetUrl);
-        const data = await response.json();
-        if(data && data.data && data.data.length > 0) {
-            const menuItems = data.data.map(item => item.DishName).filter(Boolean);
-            if(menuItems.length > 0) {
-                $("menu").value = menuItems.join('、');
-            }
-        }
-        $("menu").placeholder = "例如：糙米飯、糖醋排骨、蒜炒菠菜、味噌湯";
-    } catch (e) {
-        console.error("午餐 API 讀取失敗", e);
-        $("menu").placeholder = "自動讀取失敗，請手動填寫";
-    }
 }
 
 // ---------- 今日試菜 ----------
@@ -75,8 +56,7 @@ $("b1").onclick = async () => {
   const ok = await post({ type: "lunch", date: $("date").value, classId: $("cls").value.trim(), menu: $("menu").value.trim(), feedback: $("fb").value.trim(), photos: b64s("ph"), menuPhotos: b64s("mp") }, $("b1"), $("m1"), "✅ 已送出！前台稍後更新");
   if (ok) { $("fb").value = $("menu").value = $("cls").value = ""; clr("ph", "th"); clr("mp", "mth"); showRota(); }
 };
-
-// 輪值提示
+// 輪值提示：今天排了哪些班級、誰已回報
 let sched = {};
 async function showRota() {
   const d = $("date").value, box = $("rota"); if (!d || !$("key").value.trim()) { box.textContent = ""; return; }
@@ -87,34 +67,7 @@ async function showRota() {
   } catch (e) { box.textContent = ""; }
 }
 $("rota").onclick = e => { const b = e.target.closest("button"); if (b) $("cls").value = b.dataset.c; };
-$("date").onchange = () => { showRota(); fetchMenuFromAPI($("date").value); };
-$("key").onchange = () => { sched = {}; showRota(); checkSuperAdmin(); }; 
-
-// ---------- 超級密碼管理權限 ----------
-function checkSuperAdmin() {
-    const key = $("key").value.trim();
-    const panel = document.getElementById('superAdminPanel');
-    if(key === 'superadmin123' || key.toLowerCase().includes('super')) {
-        if(panel) panel.style.display = 'block';
-    } else {
-        if(panel) panel.style.display = 'none';
-    }
-}
-
-showRota(); fetchMenuFromAPI($("date").value); checkSuperAdmin();
-
-// 幹部議題送出
-const btnSuperSubmit = document.getElementById('btnSuperAdminSubmit');
-if(btnSuperSubmit) {
-    btnSuperSubmit.onclick = async () => {
-        const title = document.getElementById('adminIssueTitle').value.trim();
-        const content = document.getElementById('adminIssueContent').value.trim();
-        if(!title) return alert("請填寫議題名稱");
-        alert(`已紀錄幹部議題：${title}\n（後續可擴充串接GAS）`);
-        document.getElementById('adminIssueTitle').value = "";
-        document.getElementById('adminIssueContent').value = "";
-    };
-}
+$("date").onchange = showRota; $("key").onchange = () => { sched = {}; showRota(); }; showRota();
 
 // ---------- 反映 ----------
 $("b2").onclick = async () => {
@@ -131,7 +84,7 @@ async function loadPend() {
   if (!C.QA_URL) { $("pend").innerHTML = '<option value="">（尚未設定反映分頁網址）</option>'; return; }
   try {
     const rows = (await H.fetchCsv(C.QA_URL, true)).filter(x => { const s = String(x["狀態"] || "").trim(); return s == "追蹤中" || (!s && !String(x["營養師回覆"] || "").trim()); });
-    $("pend").innerHTML = rows.length ? rows.map(x => { const d = H.norm(x["日期"]); return `<option value='${JSON.stringify([d, x["標題"]]).replace(/'/g, "&#39;")}' >${d.slice(5)}｜${H.E(x["標題"])}</option>`; }).join("") : '<option value="">目前沒有追蹤中的反映 🎉</option>';
+    $("pend").innerHTML = rows.length ? rows.map(x => { const d = H.norm(x["日期"]); return `<option value='${JSON.stringify([d, x["標題"]]).replace(/'/g, "&#39;")}'>${d.slice(5)}｜${H.E(x["標題"])}</option>`; }).join("") : '<option value="">目前沒有追蹤中的反映 🎉</option>';
   } catch (e) { $("pend").innerHTML = '<option value="">載入失敗</option>'; }
 }
 loadPend();
@@ -144,10 +97,8 @@ $("b4").onclick = async () => {
   try { m.className = "msg"; m.textContent = "解析中…"; await lib();
     const res = parseSchedule(await aoa($("xs").files[0]), (await aoa($("xr").files[0]))[0]);
     if (!res.rows.length) throw new Error("沒有解析到任何輪值，請確認檔案格式");
-    if (!confirm(`解析到 ${new Set(res.rows.map(r => r[0])).size} 天、${res.rows.length} 筆輪值。要匯入取代舊排班嗎？`)) { m.textContent = ""; return; }
+    if (!confirm(`解析到 ${new Set(res.rows.map(r => r[0])).size} 天、${res.rows.length} 筆輪值（${res.missing.length} 個名字找不到班級，多為行政代表）。要匯入並取代舊的排班嗎？`)) { m.textContent = ""; return; }
     if (await post({ type: "schedule", rows: res.rows }, $("b4"), m, `✅ 已匯入 ${res.rows.length} 筆輪值`)) sched = {}, showRota();
   } catch (e) { m.className = "msg er"; m.textContent = "⚠️ " + e.message; }
 };
-
-$("key").addEventListener('input', checkSuperAdmin);
 })();
