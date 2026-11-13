@@ -1,45 +1,75 @@
 <!DOCTYPE html>
-<html lang="zh-Hant"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow">
-<title>家代填寫入口・東門國小營養午餐</title><link rel="stylesheet" href="css/style.css">
+<html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex"><title>試菜紀錄更新工具</title>
 <style>
-section.f{background:#fff;border:2px solid var(--bd);border-radius:22px;padding:12px 16px;margin:14px 0;box-shadow:0 4px 12px #f3d9b833}
-section.f h2{margin-top:4px}label{display:block;font-weight:700;margin-top:8px;font-size:.92rem}
-.f input,.f textarea,.f select{width:100%;padding:8px 10px;border:2px solid var(--bd);border-radius:12px;background:#fffdf9}.f textarea{min-height:96px}
-.f button,.btn{font:inherit;background:var(--ac);color:#fff;border:0;border-radius:99px;padding:8px 24px;margin:12px 8px 0 0;cursor:pointer}.f button.g{background:#fff;color:var(--ac);border:2px solid var(--ac);padding:4px 14px;margin:6px 6px 0 0;font-size:.88rem}button:disabled{opacity:.5}
-.row{display:flex;gap:10px}.row>div{flex:1}.th img{height:80px;border-radius:10px;margin:6px 6px 0 0}.msg{margin-top:8px;font-weight:700}.ok{color:#1d6b43}.er{color:#c0392b}
-.rota{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}.rota button{margin:0!important;padding:2px 12px!important}.rota .done{background:var(--mt)!important;color:#1d6b43!important;border-color:#8fdcae!important}
-details.adm{margin:6px 0}details.adm summary{cursor:pointer;font-weight:700}
-</style></head><body>
-<div class="w"><h1>✏️ 家代填寫入口 <small>📷 照片會自動縮小上傳</small></h1>
-<p class="mu">送出後前台約 1–5 分鐘內更新。<b>請不要寫家長或學生姓名；照片只拍餐點。</b>　<a href="index.html">回前台</a></p>
-<section class="f"><label>通關密語（幹部提供，這支手機會記住）</label><input id="key" type="password" autocomplete="off"></section>
-
-<section class="f"><h2>今日試菜</h2>
-<div class="row"><div><label>日期</label><input type="date" id="date"></div><div><label>班級</label><input id="cls" inputmode="numeric" placeholder="例如 206"></div></div>
-<div id="rota" class="mu"></div>
-<label>今日菜色（選填）</label><input id="menu" placeholder="例如：糙米飯、糖醋排骨、蒜炒菠菜、味噌湯">
-<label>菜單圖片（選填，學校公布的菜單照片）</label><input type="file" id="mp" accept="image/*" multiple><div class="th" id="mth"></div>
-<label>試菜心得（可直接貼 LINE 的試菜文字）</label><button type="button" class="g" id="tpl">插入白飯／主菜／副菜／青菜／湯範本</button>
-<textarea id="fb" placeholder="白飯：軟硬適中&#10;主菜：偏鹹…"></textarea>
-<label>試菜照片（可多選，只拍餐點）</label><input type="file" id="ph" accept="image/*" multiple><div class="th" id="th"></div>
-<button id="b1">送出試菜紀錄</button><div class="msg" id="m1"></div><p class="mu">同一天有第二位代表，再送出一次即可。</p></section>
-
-<section class="f"><h2>新增反映事項（有問題才填）</h2>
-<div class="row"><div><label>日期</label><input type="date" id="qd"></div><div><label>標題</label><input id="qt" placeholder="例如：螞蟻上樹有油耗味"></div></div>
-<label>反映摘要（不要寫姓名）</label><textarea id="qs"></textarea>
-<label>照片（選填，可多選）</label><input type="file" id="qp" accept="image/*" multiple><div class="th" id="qth"></div>
-<label>營養師／學校回覆（還沒回覆就留空，前台會顯示「追蹤中」）</label><textarea id="qr"></textarea>
-<button id="b2">送出反映事項</button><div class="msg" id="m2"></div></section>
-
-<section class="f"><h2>幫「追蹤中」的反映補上回覆</h2>
-<select id="pend"><option value="">載入中…</option></select><label>營養師／學校回覆</label><textarea id="pr"></textarea>
-<button id="b3">送出回覆</button><div class="msg" id="m3"></div></section>
-
-<section class="f"><details class="adm"><summary>📅 幹部專用：匯入輪值排班表</summary>
-<p class="mu">選擇「輪值表.xlsx」和「家長代表名冊.xlsx」。檔案只在你的手機／電腦裡解析，<b>只會上傳「日期＋班級」，不會上傳任何姓名</b>。匯入後，填寫今日試菜時會顯示當天輪值班級，以及誰還沒回報。</p>
-<label>輪值表（排班表）</label><input type="file" id="xs" accept=".xlsx,.xls"><label>家長代表名冊</label><input type="file" id="xr" accept=".xlsx,.xls">
-<button id="b4">解析並匯入</button><div class="msg" id="m4"></div></details></section>
-</div>
-<script src="js/config.js"></script><script src="js/common.js"></script><script src="js/admin.js"></script>
-</body></html>
+body{margin:0;background:#f5f8fd;color:#232a35;font:16px/1.6 "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+.w{max-width:760px;margin:0 auto;padding:16px 14px 60px}h1{font-size:1.4rem;color:#0f4fb0;margin:.3em 0}
+section{background:#fff;border:1px solid #dbe3f0;border-radius:14px;padding:12px 16px;margin:14px 0}h2{font-size:1.05rem;margin:0 0 8px;border-left:4px solid #d63a28;padding-left:8px}
+textarea,input,select{font:inherit;width:100%;padding:6px 8px;border:1px solid #c9d3e3;border-radius:8px;margin:3px 0}textarea{min-height:110px}
+button{font:inherit;background:#0f4fb0;color:#fff;border:0;border-radius:99px;padding:7px 20px;cursor:pointer;margin:6px 6px 0 0}button.g{background:#667085}button.x{background:#d63a28;padding:3px 12px}
+.card{border:1px dashed #9db3d6;border-radius:10px;padding:8px 10px;margin:8px 0}.row{display:flex;gap:8px}.row>*{flex:1}.mu{color:#667085;font-size:.88rem}
+#th img{height:90px;border-radius:6px;margin:4px 4px 0 0}details{border-top:1px solid #e6ecf5;padding:6px 0}
+</style></head><body><div class="w">
+<h1>試菜紀錄更新工具 🛠️</h1>
+<p class="mu">步驟：貼上試菜文字、選照片、（有的話）填反映與回覆 → 按「下載更新包」→ 解壓後把 data、img 資料夾拖進 GitHub 的 Upload files。這個工具只會產生檔案，不會修改網站。</p>
+<section><h2>1 載入目前資料</h2><select id="sem"></select><div id="ld" class="mu"></div>
+<div class="mu">自動載入失敗時，請手動選擇 data 資料夾裡的學期檔：<input type="file" id="f" accept=".json"></div></section>
+<section><h2>2 試菜紀錄</h2><label>日期</label><input type="date" id="dt">
+<textarea id="tx" placeholder="直接貼 LINE 試菜回報（可多位代表）。也可以一次貼整份 LINE 匯出文字，工具會依日期自動分開。"></textarea>
+<button id="pa">解析文字</button><span class="mu">解析後可在下方修改班級與內容</span><div id="cards"></div>
+<p><b>照片</b>（只拍餐點；會自動縮小）<input type="file" id="ph" multiple accept="image/*"></p><div id="th"></div></section>
+<section><h2>3 家長反映與營養師回覆（有才填）</h2>
+<input id="rt" placeholder="標題，例如：螞蟻上樹有油耗味"><textarea id="rq" placeholder="家長反映摘要（不要寫姓名）"></textarea><textarea id="ra" placeholder="營養師／學校回覆（還沒回覆可留空）"></textarea>
+<button id="radd">加入這則反映</button><div id="qa"></div></section>
+<section><h2>4 下載</h2><button id="dl">下載更新包 (.zip)</button><div id="msg" class="mu"></div></section></div>
+<script>
+//PURE-START
+const CL=/(?<!\d)([1-6](?:0\d|1[01]))(?!\d)/;
+const clean=l=>l.replace(/^[\s*•·\-–—＊]+/,"").trim();
+function fromText(txt,d){const blocks=[];let cur=null;
+ for(const raw of txt.replace(/\r/g,"").split("\n")){const l=raw.trim();
+  if(/試[菜吃]/.test(l)&&(CL.test(l)||/\d{1,2}[\/／]\d{1,2}/.test(l))&&l.length<40){cur={h:l,l:[]};blocks.push(cur)}
+  else if(l){if(!cur){cur={h:"",l:[]};blocks.push(cur)}cur.l.push(clean(l))}}
+ return blocks.filter(b=>b.l.length).map(b=>({d,c:(b.h.match(CL)||[])[1]||"",l:b.l}))}
+function fromLine(txt){const out=[];let date=null,cur=null;
+ const push=()=>{if(cur){const t=cur.t.join("\n").replace(/^"|"$/g,"").trim();if(/試[菜吃]/.test(t)&&t.split("\n").length>=2)out.push(...fromText(t,cur.d));cur=null}};
+ for(const raw of txt.replace(/\r/g,"").split("\n")){const m=raw.match(/^(\d{4})\/(\d\d)\/(\d\d)（/);
+  if(m){push();date=`${m[1]}-${m[2]}-${m[3]}`;continue}
+  const t=raw.match(/^\d\d:\d\d\t[^\t]*\t?(.*)$/);
+  if(t){push();cur={d:date,t:[t[1]]}}else if(cur)cur.t.push(raw)}
+ push();return out}
+const crcT=(()=>{const t=[];for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}return t})();
+const crc=u=>{let c=~0;for(let i=0;i<u.length;i++)c=crcT[(c^u[i])&255]^(c>>>8);return ~c>>>0};
+async function zip(files){const enc=new TextEncoder(),loc=[],cen=[];let off=0,cs=0;
+ for(const[name,blob]of files){const d=new Uint8Array(await blob.arrayBuffer()),nm=enc.encode(name),c=crc(d);
+  const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x800,true);h.setUint16(12,0x21,true);h.setUint32(14,c,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,nm.length,true);
+  const g=new DataView(new ArrayBuffer(46));g.setUint32(0,0x02014b50,true);g.setUint16(4,20,true);g.setUint16(6,20,true);g.setUint16(8,0x800,true);g.setUint16(14,0x21,true);g.setUint32(16,c,true);g.setUint32(20,d.length,true);g.setUint32(24,d.length,true);g.setUint16(28,nm.length,true);g.setUint32(42,off,true);
+  loc.push(h.buffer,nm,d);cen.push(g.buffer,nm);off+=30+nm.length+d.length;cs+=46+nm.length}
+ const e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,cs,true);e.setUint32(16,off,true);
+ return new Blob([...loc,...cen,e.buffer],{type:"application/zip"})}
+//PURE-END
+const $=id=>document.getElementById(id);let SEM=null,ID="",pend=[],newPh=[];
+$("dt").value=new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+function setSem(s){SEM=s;ID=s.id;SEM.qa=SEM.qa||[];SEM.days=SEM.days||[];$("ld").textContent=`已載入 ${s.name}：${SEM.days.length} 天紀錄、${SEM.qa.length} 則反映`;renderQa()}
+async function load(id){try{setSem(await (await fetch("data/"+id+".json?"+Date.now())).json())}catch(e){$("ld").textContent="自動載入失敗，請用下方手動選檔"}}
+fetch("data/semesters.json").then(r=>r.json()).then(ids=>{$("sem").innerHTML=ids.map(i=>`<option>${i}</option>`).join("");$("sem").value=ids[ids.length-1];$("sem").onchange=()=>load($("sem").value);load(ids[ids.length-1])}).catch(()=>{$("ld").textContent="自動載入失敗，請用下方手動選檔"});
+$("f").onchange=async e=>setSem(JSON.parse(await e.target.files[0].text()));
+$("pa").onclick=()=>{const t=$("tx").value;pend=/^\d\d:\d\d\t/m.test(t)?fromLine(t):fromText(t,$("dt").value);if(!pend.length)$("msg").textContent="沒有解析到試菜內容，請確認有貼上文字";cards()};
+function cards(){$("cards").innerHTML=pend.map((p,i)=>`<div class="card"><div class="row"><input type="date" data-i="${i}" data-k="d" value="${p.d||$("dt").value}"><input data-i="${i}" data-k="c" value="${p.c}" placeholder="班級，例如 206（不確定可留空）"><button class="x" data-del="${i}">刪除</button></div><textarea data-i="${i}" data-k="l">${p.l.join("\n").replace(/</g,"&lt;")}</textarea></div>`).join("")}
+$("cards").oninput=e=>{const i=e.target.dataset.i,k=e.target.dataset.k;if(i==null)return;pend[i][k]=k=="l"?e.target.value.split("\n").map(s=>s.trim()).filter(Boolean):e.target.value};
+$("cards").onclick=e=>{if(e.target.dataset.del!=null){pend.splice(+e.target.dataset.del,1);cards()}};
+function shrink(f){return new Promise(res=>{const u=URL.createObjectURL(f),im=new Image();im.onerror=()=>res(null);im.onload=()=>{const k=Math.min(1,560/Math.max(im.width,im.height)),c=document.createElement("canvas");c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext("2d").drawImage(im,0,0,c.width,c.height);c.toBlob(b=>res({b,u:URL.createObjectURL(b)}),"image/jpeg",.62)};im.src=u})}
+$("ph").onchange=async e=>{for(const f of e.target.files){const p=await shrink(f);if(p)newPh.push(p);else $("msg").textContent="有照片格式無法讀取（例如 HEIC），請改用 JPG/PNG"}$("th").innerHTML=newPh.map((p,i)=>`<img src="${p.u}" alt="">`).join("")};
+function renderQa(){$("qa").innerHTML=SEM.qa.map((q,i)=>`<details><summary>${(q.t||"").replace(/</g,"&lt;")}　<span class="mu">${q.s||""}</span></summary><input data-q="${i}" data-k="t" value="${(q.t||"").replace(/"/g,"&quot;")}"><textarea data-q="${i}" data-k="q" placeholder="家長反映">${q.q||q.x||""}</textarea><textarea data-q="${i}" data-k="a" placeholder="營養師／學校回覆">${q.a||""}</textarea><select data-q="${i}" data-k="s"><option${q.s=="追蹤中"?" selected":""}>追蹤中</option><option${q.s!="追蹤中"?" selected":""}>已回覆</option></select><button class="x" data-qd="${i}">刪除這則</button></details>`).join("")}
+$("qa").oninput=e=>{const i=e.target.dataset.q;if(i==null)return;const q=SEM.qa[i],k=e.target.dataset.k;q[k]=e.target.value;if(k=="q")delete q.x}
+$("qa").onclick=e=>{if(e.target.dataset.qd!=null){SEM.qa.splice(+e.target.dataset.qd,1);renderQa()}};
+$("radd").onclick=()=>{if(!SEM)return;const d=$("dt").value,t=$("rt").value.trim();if(!t)return alert("請填標題");const[,m,x]=d.split("-");
+ SEM.qa.push({m,d,t:`${+m}/${+x}｜${t}`,q:$("rq").value.trim(),a:$("ra").value.trim(),s:$("ra").value.trim()?"已回覆":"追蹤中"});$("rt").value=$("rq").value=$("ra").value="";renderQa();$("msg").textContent="已加入，記得按下方「下載更新包」"};
+$("dl").onclick=async()=>{if(!SEM)return alert("尚未載入資料");const d0=$("dt").value,files=[];
+ for(const p of pend){const d=p.d||d0;let day=SEM.days.find(x=>x.d==d);if(!day){day={d,reps:[],ph:[],n:[]};SEM.days.push(day)}
+  const c0=(p.c||"").trim(),c=c0?(/[班表]$/.test(c0)?c0:c0+"班"):"家長代表",i=c=="家長代表"?-1:day.reps.findIndex(r=>r.c==c);if(i>=0)day.reps[i]={c,l:p.l};else day.reps.push({c,l:p.l})}
+ if(newPh.length){let day=SEM.days.find(x=>x.d==d0);if(!day){day={d:d0,reps:[],ph:[],n:[]};SEM.days.push(day)}const s=day.ph.length;newPh.forEach((p,i)=>{const fn=`img/${d0.replace(/-/g,"")}-${s+i+1}.jpg`;day.ph.push(fn);files.push([fn,p.b])})}
+ SEM.days.sort((a,b)=>a.d<b.d?-1:1);files.push([`data/${ID}.json`,new Blob([JSON.stringify(SEM,null,1)],{type:"application/json"})]);
+ const a=document.createElement("a");a.href=URL.createObjectURL(await zip(files));a.download="更新包-"+d0+".zip";a.click();
+ $("msg").textContent=`已下載（${pend.length}份試菜、${newPh.length}張照片）。請解壓後上傳 data、img 資料夾，等 1–2 分鐘網站更新後再使用本工具。`;pend=[];newPh=[];$("cards").innerHTML=$("th").innerHTML="";$("tx").value=""};
+</script></body></html>
