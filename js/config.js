@@ -5,5 +5,5 @@ window.CONFIG = {
   // 試算表「反映」分頁的 CSV 連結（同上，選「反映」分頁）。還沒設定可留空
   QA_URL: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vREskMp4E7maOMthtokLEWGgeRBNBKxl3djFSIxeYCfccmBiaC0iWup2HUvfNz40DYQkATEd8_nOlmo/pub?gid=1524583769&single=true&output=csv',
   // Apps Script 網頁應用程式網址（家代填寫入口使用）
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbx8KcPuR-loKV9itJsg20WO-Sdy1Yj-BfbS78hV08lCBwT_0qpi_oiBfnKx1d-t1WVb/exec'
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbymrsDtI_45T7y_NVqJCksr6sDNBczAZqGdTWN__in9tVqz3IxSDStY1aQxr54vugCj/exec'
 };
