@@ -40,13 +40,21 @@ H.fetchCsv = async (url, fresh) => {
   const r = await fetch(url + (url.includes("?") ? "&" : "?") + "t=" + (fresh ? Date.now() : Math.floor(Date.now() / 3e5)));
   if (!r.ok) throw new Error("http " + r.status); return H.csv(await r.text());
 };
-// 先回傳快取（立刻可顯示），再由 fresh 取得最新資料
+// 公開資料由 Apps Script 提供（已去識別化：只有年級）。先回傳快取（立刻可顯示），再由 fresh 取得最新資料
 H.load = () => {
-  let cache = null; try { cache = JSON.parse(localStorage.getItem("dmpa2")); } catch (e) {}
-  const fresh = Promise.all([H.fetchCsv(C.DATA_URL), C.QA_URL ? H.fetchCsv(C.QA_URL) : []]).then(([l, q]) => {
-    try { localStorage.setItem("dmpa2", JSON.stringify({ l, q })); } catch (e) {} return { l, q }; });
+  let cache = null; try { cache = JSON.parse(localStorage.getItem("dmpa3")); } catch (e) {}
+  const fresh = fetch(C.GAS_URL + "?action=public&t=" + Math.floor(Date.now() / 6e4)).then(r => r.json()).then(d => {
+    if (d.status !== "success") throw new Error(d.message || "載入失敗");
+    const o = { l: d.l, q: d.q }; try { localStorage.setItem("dmpa3", JSON.stringify(o)); } catch (e) {} return o; });
   return { cache, fresh };
 };
+// 照片縮小（手機端先壓縮再上傳）
+H.shrink = f => new Promise(res => {
+  const im = new Image(); im.onerror = () => res(null);
+  im.onload = () => { const k = Math.min(1, 1000 / Math.max(im.width, im.height)), c = document.createElement("canvas");
+    c.width = Math.round(im.width * k); c.height = Math.round(im.height * k); c.getContext("2d").drawImage(im, 0, 0, c.width, c.height);
+    const u = c.toDataURL("image/jpeg", .72); res({ u, b64: u.split(",")[1] }); };
+  im.src = URL.createObjectURL(f); });
 
 // ---- 資料整理 ----
 H.build = (lunch, qa) => {
