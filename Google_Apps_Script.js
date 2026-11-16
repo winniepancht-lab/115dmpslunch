@@ -3,7 +3,7 @@
 // 部署：部署 → 管理部署作業 → 鉛筆圖示 → 版本選「新版本」→ 部署（網址不變）。KEY 沿用原本的指令碼屬性。
 // 試算表「不要」發布到網路，也不要分享給別人；所有資料只由這支程式讀寫。
 
-const VERSION = '3.0';
+const VERSION = '3.2';
 const TZ = 'Asia/Taipei';
 const PHOTO_FOLDER = '東門試菜照片';
 const WINDOW_DAYS = 2;   // 家代可在輪值日當天起、往後 2 天內補填
@@ -12,7 +12,7 @@ const REC_COLS = ['ID', '日期', '姓名', '班級', '年級', '填報時間', 
 const ISS_COLS = ['ID', '日期', '標題', '摘要', '回覆', '狀態', '照片連結', '公開', '建立時間', '更新時間'];
 const SCH_COLS = ['日期', '姓名', '班級'];
 const ROS_COLS = ['姓名', '班級', '年級', 'Token', '啟用', '建立時間'];
-const MENU_COLS = ['日期', '菜色', '來源', '更新時間'];
+const MENU_COLS = ['日期', '菜色', '來源', '更新時間', '平台照片', '顯示照片'];
 
 // ---------- 基礎工具 ----------
 function out_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
@@ -86,14 +86,88 @@ function checkKey_(k) {
   return '';
 }
 
+// ---------- 教育局菜單（教育部校園食材登錄平台・公開查詢）----------
+const MOE_HOST = 'https://fatraceschool.k12ea.gov.tw', SCHOOL_ID = '353606';
+const DISH_KEY = /^(dish_?name|menu_?name|food_?name|recipe_?name|meal_?name|菜名|菜色|品名|食譜名稱)$/i;
+// 從平台回傳的 JSON 找出每道菜 { n: 菜名, u: 平台菜色照片網址 }
+function moeDishes_(o, out) {
+  out = out || [];
+  if (Array.isArray(o)) o.forEach(function (x) { moeDishes_(x, out); });
+  else if (o && typeof o === 'object') {
+    let name = '', id = '', pic = '';
+    Object.keys(o).forEach(function (k) {
+      const v = o[k];
+      if (typeof v === 'string' && DISH_KEY.test(k)) name = v.trim();
+      else if (/^dish_?id$/i.test(k) && (typeof v === 'string' || typeof v === 'number')) id = String(v);
+      else if (typeof v === 'string' && /(pic|image|photo|img)/i.test(k) && /^(https?:\/\/|\/)/.test(v)) pic = v.charAt(0) === '/' ? MOE_HOST + v : v;
+      else if (v && typeof v === 'object') moeDishes_(v, out);
+    });
+    if (name && !out.some(function (d) { return d.n === name; })) out.push({ n: name, u: pic || (id ? MOE_HOST + '/dish/pic/' + id : '') });
+  }
+  return out;
+}
+function findKeys_(o, re, out) {
+  out = out || [];
+  if (Array.isArray(o)) o.forEach(function (x) { findKeys_(x, re, out); });
+  else if (o && typeof o === 'object') Object.keys(o).forEach(function (k) {
+    if (re.test(k) && (typeof o[k] === 'string' || typeof o[k] === 'number')) out.push(String(o[k])); else findKeys_(o[k], re, out);
+  });
+  return out;
+}
+function fetchMoe_(date) {
+  const log = [];
+  const get = function (u) {
+    const r = UrlFetchApp.fetch(u, { muteHttpExceptions: true, headers: { 'Accept': 'application/json, text/plain, */*', 'Referer': MOE_HOST + '/frontend/search.html?school=' + SCHOOL_ID } });
+    log.push(r.getResponseCode() + ' ' + u); return r.getContentText();
+  };
+  let first = '', dishes = [];
+  try {
+    first = get(MOE_HOST + '/offered/meal?KitchenId=all&MenuType=1&period=' + date + '&SchoolId=' + SCHOOL_ID);
+    let j = null; try { j = JSON.parse(first); } catch (e) { log.push('第一步回傳不是 JSON'); }
+    if (j) {
+      dishes = moeDishes_(j);
+      if (!dishes.length) findKeys_(j, /^batchdataid$/i).forEach(function (id) {
+        if (dishes.length) return;
+        try { dishes = moeDishes_(JSON.parse(get(MOE_HOST + '/dish?BatchDataId=' + encodeURIComponent(id)))); } catch (e) { log.push('菜色回傳不是 JSON'); }
+      });
+    }
+  } catch (e) { log.push('連線失敗：' + e); }
+  return { dishes: dishes, log: log, raw: String(first).slice(0, 800) };
+}
+function picsOf_(row) { try { return JSON.parse((row && row['平台照片']) || '[]'); } catch (e) { return []; } }
+// 取得某日菜單：已存的直接用；沒有才向平台查（失敗 15 分鐘內不重試）。force＝重新查（手動填的菜色保留，只更新照片）
+function menuFor_(date, doFetch, force) {
+  const t = tbl_(S_MENU, MENU_COLS), ex = rows_(t).filter(function (r) { return ds_(r['日期']) === date; })[0];
+  const cur = { dishes: ex ? ex['菜色'] : '', source: ex ? ex['來源'] : '', pics: picsOf_(ex), showPics: !ex || ex['顯示照片'] !== '否' };
+  if (cur.dishes && !force) return cur;
+  if (!doFetch) return cur;
+  const cache = CacheService.getScriptCache();
+  if (!force && cache.get('mf_' + date)) { cur.skipped = true; return cur; }
+  const r = fetchMoe_(date);
+  if (!r.dishes.length) { cache.put('mf_' + date, '1', 900); cur.failed = true; cur.log = r.log; cur.raw = r.raw; return cur; }
+  const manual = cur.dishes && cur.source === '幹部', names = r.dishes.map(function (d) { return d.n; }).join('、');
+  const pics = r.dishes.filter(function (d) { return d.u; });
+  menuSet_(manual ? { date: date, pics: pics } : { date: date, dishes: names, source: '教育局', pics: pics });
+  return { dishes: manual ? cur.dishes : names, source: manual ? '幹部' : '教育局', pics: pics, showPics: cur.showPics, kept: !!manual, log: r.log };
+}
+function menuGet_(b) {
+  const d = ds_(b.date || today_()), r = menuFor_(d, b.fetch !== false, !!b.force);
+  r.status = 'success'; r.date = d; return r;
+}
+function authorizeAll() {   // 在編輯器執行一次，授權「連外網」「雲端硬碟」「快取」
+  SpreadsheetApp.getActiveSpreadsheet().getName(); DriveApp.getRootFolder();
+  UrlFetchApp.fetch(MOE_HOST + '/frontend/', { muteHttpExceptions: true }); CacheService.getScriptCache().put('x', '1', 5);
+  Logger.log('授權完成');
+}
+
 // ---------- 公開資料（完全去識別化：只有年級，沒有姓名、班級、填報時間）----------
 function publicData_() {
   const menu = {};
-  rows_(tbl_(S_MENU, MENU_COLS)).forEach(function (m) { menu[ds_(m['日期'])] = m['菜色']; });
+  rows_(tbl_(S_MENU, MENU_COLS)).forEach(function (m) { menu[ds_(m['日期'])] = { d: m['菜色'], s: m['來源'], p: m['顯示照片'] !== '否' && m['平台照片'] && m['平台照片'] !== '[]' ? m['平台照片'] : '' }; });
   const seen = {};
   const l = rows_(tbl_(S_REC, REC_COLS)).filter(function (r) { return r['狀態'] === '已發布'; }).map(function (r) {
-    const d = ds_(r['日期']), first = !seen[d]; seen[d] = 1;
-    return { '日期': d, '班級': r['年級'], '午餐菜色': first ? (menu[d] || '') : '', '家代意見反饋': r['試菜內容'], '照片連結': r['照片連結'], '營養師回應': '', '菜單圖片': r['菜單圖片'] };
+    const d = ds_(r['日期']), first = !seen[d], m = first && menu[d] ? menu[d] : { d: '', s: '', p: '' }; seen[d] = 1;
+    return { '日期': d, '班級': r['年級'], '午餐菜色': m.d, '菜單來源': m.s, '平台照片': m.p, '家代意見反饋': r['試菜內容'], '照片連結': r['照片連結'], '營養師回應': '', '菜單圖片': r['菜單圖片'] };
   });
   const q = rows_(tbl_(S_ISS, ISS_COLS)).filter(function (r) { return r['公開'] !== '否'; }).map(function (r) {
     return { '日期': ds_(r['日期']), '標題': r['標題'], '反映摘要': r['摘要'], '營養師回覆': r['回覆'], '狀態': r['狀態'], '照片連結': r['照片連結'] };
@@ -113,14 +187,19 @@ function repInfo_(tok) {
   const sched = rows_(tbl_(S_SCH, SCH_COLS)).filter(function (r) { return r['姓名'] === rep['姓名']; }).map(function (r) { return ds_(r['日期']); }).sort();
   const mine = rows_(tbl_(S_REC, REC_COLS)).filter(function (r) { return r['姓名'] === rep['姓名'] && r['狀態'] !== '隱藏'; });
   const rec = function (d) { return mine.filter(function (r) { return ds_(r['日期']) === d; })[0]; };
+  const lockedRec = function (r) { return !!r && (r['狀態'] === '已發布' || r['狀態'] === '僅記錄' || (r['來源'] && r['來源'] !== '家代填報')); };
+  let fetched = 0;
   return {
     status: 'success', name: rep['姓名'], cls: rep['班級'], today: today,
     open: sched.filter(function (d) { return d <= today && d >= minD; }).map(function (d) {
-      const r = rec(d);
-      return { d: d, s: r ? r['狀態'] : '', text: r ? r['試菜內容'] : '', note: r ? r['審核備註'] : '', nph: r && r['照片連結'] ? r['照片連結'].split(',').length : 0 };
+      const r = rec(d); let m = { dishes: '' };
+      try { m = menuFor_(d, fetched++ < 3, false); } catch (e) {}
+      return { d: d, s: r ? r['狀態'] : '', locked: lockedRec(r), text: r ? r['試菜內容'] : '', note: r ? r['審核備註'] : '', nph: r && r['照片連結'] ? r['照片連結'].split(',').filter(Boolean).length : 0, menu: m.dishes || '', menuSrc: m.source || '', pics: m.pics || [] };
     }),
     upcoming: sched.filter(function (d) { return d > today; }).slice(0, 5),
-    history: mine.sort(function (a, b) { return ds_(a['日期']) < ds_(b['日期']) ? 1 : -1; }).slice(0, 20).map(function (r) { return { d: ds_(r['日期']), s: r['狀態'], note: r['審核備註'] }; })
+    history: mine.sort(function (a, b) { return ds_(a['日期']) < ds_(b['日期']) ? 1 : -1; }).slice(0, 40).map(function (r) {
+      return { d: ds_(r['日期']), s: r['狀態'], src: r['來源'] || '', note: r['審核備註'], text: r['試菜內容'], ph: String(r['照片連結'] || '').split(',').filter(Boolean) };
+    })
   };
 }
 function submit_(b) {
@@ -133,7 +212,7 @@ function submit_(b) {
   if (!text && !photos.length) return err_('請填寫試菜心得或附照片');
   const t = tbl_(S_REC, REC_COLS);
   const ex = rows_(t).filter(function (r) { return r['姓名'] === rep['姓名'] && ds_(r['日期']) === date && r['狀態'] !== '隱藏'; })[0];
-  if (ex && ex['狀態'] === '已發布') return err_('這筆已經上線，如需修改請聯絡幹部');
+  if (ex && (ex['狀態'] === '已發布' || ex['狀態'] === '僅記錄' || (ex['來源'] && ex['來源'] !== '家代填報'))) return err_('這筆已由幹部登錄或已上線，無法修改；如需更正請聯絡幹部');
   let ph = ex ? ex['照片連結'] : '';
   if (photos.length) { trashPhotos_(ph); ph = savePhotos_(photos, date); }
   const data = { '日期': date, '姓名': rep['姓名'], '班級': rep['班級'], '年級': rep['年級'], '填報時間': now_(), '試菜內容': text, '照片連結': ph, '狀態': '待審', '審核備註': '', '來源': '家代填報' };
@@ -161,7 +240,7 @@ function approve_(b) {
   return { status: 'success', count: n };
 }
 function recStatus_(b) {
-  if (['待審', '已發布', '退回', '隱藏'].indexOf(b.status) < 0) return err_('狀態不正確');
+  if (['待審', '已發布', '退回', '隱藏', '僅記錄'].indexOf(b.status) < 0) return err_('狀態不正確');
   const t = tbl_(S_REC, REC_COLS), r = recById_(t, b.id); if (!r) return err_('找不到這筆紀錄');
   set_(t, r._r, { '狀態': b.status, '審核時間': now_(), '審核備註': b.note || '' });
   return { status: 'success' };
@@ -188,9 +267,9 @@ function recAdd_(b) {   // 補登：可一次多筆，預設直接上線
   (b.items || []).forEach(function (x) {
     const d = ds_(x.date), name = String(x.name || '').trim();
     if (name && have.some(function (r) { return r['姓名'] === name && ds_(r['日期']) === d && r['狀態'] !== '隱藏'; })) { skipped.push(d + ' ' + name); return; }
-    const pub = (x.status || '已發布') === '已發布';
+    const st = x.status || '已發布', pub = st !== '待審';
     add_(t, { 'ID': id_(), '日期': d, '姓名': name, '班級': x.cls || '', '年級': gradeOf_(x.cls), '填報時間': now_(), '試菜內容': String(x.text || '').slice(0, 2000),
-      '照片連結': savePhotos_(x.photos, d), '狀態': pub ? '已發布' : '待審', '審核時間': pub ? now_() : '', '來源': '幹部補登' });
+      '照片連結': savePhotos_(x.photos, d), '狀態': st, '審核時間': pub ? now_() : '', '來源': x.source || '幹部補登' });
     have.push({ '姓名': name, '日期': d, '狀態': '已發布' });   // 同一批內的重複也要擋下
     n++;
   });
@@ -198,7 +277,10 @@ function recAdd_(b) {   // 補登：可一次多筆，預設直接上線
 }
 function menuSet_(b) {
   const t = tbl_(S_MENU, MENU_COLS), d = ds_(b.date), ex = rows_(t).filter(function (r) { return ds_(r['日期']) === d; })[0];
-  const o = { '日期': d, '菜色': b.dishes || '', '來源': b.source || '幹部', '更新時間': now_() };
+  const o = { '日期': d, '更新時間': now_() };
+  if (b.dishes != null) { o['菜色'] = String(b.dishes); o['來源'] = b.source || '幹部'; }
+  if (b.pics != null) o['平台照片'] = JSON.stringify((b.pics || []).filter(function (x) { return x && String(x.u || '').indexOf(MOE_HOST + '/') === 0; }).map(function (x) { return { n: String(x.n || '').slice(0, 40), u: String(x.u) }; }).slice(0, 12));
+  if (b.showPics != null) o['顯示照片'] = b.showPics ? '是' : '否';
   if (ex) set_(t, ex._r, o); else add_(t, o);
   return { status: 'success' };
 }
@@ -208,8 +290,10 @@ function issueSave_(b) {
   const o = { '日期': d, '標題': b.title, '摘要': b.summary || '', '回覆': b.reply || '', '狀態': status, '公開': b.public === false ? '否' : '是', '更新時間': now_() };
   if (b.id) {
     const r = recById_(t, b.id); if (!r) return err_('找不到這則議題');
-    let ph = r['照片連結']; if (photos) ph = ph ? ph + ',' + photos : photos;
-    o['照片連結'] = ph; set_(t, r._r, o);
+    let ph = r['照片連結'].split(',').filter(Boolean);
+    (b.removePhotos || []).forEach(function (u) { trashPhotos_(u); ph = ph.filter(function (x) { return x !== u; }); });
+    if (photos) ph = ph.concat(photos.split(','));
+    o['照片連結'] = ph.join(','); set_(t, r._r, o);
   } else { o['ID'] = id_(); o['照片連結'] = photos; o['建立時間'] = now_(); add_(t, o); }
   return { status: 'success' };
 }
@@ -268,19 +352,14 @@ function migrateV2_(b) {   // 一次性：把 v2 的「試菜」「反映」分�
   });
   return { status: 'success', records: a, issues: q };
 }
-function menuTest_(b) {   // 試打教育部食登平台的公開查詢網址，回傳原始內容給幹部確認格式
-  const url = 'https://fatraceschool.k12ea.gov.tw/offered/meal?KitchenId=all&MenuType=1&period=' + (b.date || today_()) + '&SchoolId=' + (b.schoolId || '353606');
-  const r = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-  return { status: 'success', url: url, http: r.getResponseCode(), body: r.getContentText().slice(0, 3000) };
-}
 function status_() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   return { status: 'success', version: VERSION, driveFolder: DriveApp.getFoldersByName(PHOTO_FOLDER).hasNext(),
     sheets: ss.getSheets().map(function (sh) { const c = sh.getLastColumn(); return { name: sh.getName(), rows: sh.getLastRow(), headers: c ? sh.getRange(1, 1, 1, c).getValues()[0] : [] }; }) };
 }
-const OPS = { state: state_, status: status_, menu_test: menuTest_, approve: approve_, rec_status: recStatus_, rec_update: recUpdate_, rec_delete: recDelete_, rec_add: recAdd_,
+const OPS = { state: state_, status: status_, menu_test: menuGet_, menu_get: menuGet_, approve: approve_, rec_status: recStatus_, rec_update: recUpdate_, rec_delete: recDelete_, rec_add: recAdd_,
   menu_set: menuSet_, issue_save: issueSave_, issue_delete: issueDelete_, rs_import: rsImport_, rep_set: repSet_, migrate_v2: migrateV2_ };
-const READ_ONLY = { state: 1, status: 1, menu_test: 1 };
+const READ_ONLY = { state: 1, status: 1 };
 
 function doGet(e) {
   const p = (e && e.parameter) || {};
