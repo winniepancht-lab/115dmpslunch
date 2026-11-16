@@ -7,7 +7,7 @@ const api = async (op, p = {}) => {
   if (r.status !== "success") throw new Error(r.message || "失敗"); return r; };
 let tt; const toast = (t, er) => { const e = $("toast"); e.textContent = t; e.className = er ? "er" : ""; e.style.display = "block"; clearTimeout(tt); tt = setTimeout(() => e.style.display = "none", 3500); };
 const run = async (fn, ok) => { try { const r = await fn(); if (ok) toast(typeof ok == "function" ? ok(r) : ok); return r; } catch (e) { toast("⚠️ " + (e.message == "Failed to fetch" ? "連線失敗，請確認是否已送出，避免重複" : e.message), 1); } };
-const reload = async () => { S = await api("state"); render(); };
+const reload = async () => { S = await api("state"); if (!S.records) throw new Error("Apps Script 還不是 v3 版：請貼上新的 Google_Apps_Script.js 並部署為「新版本」"); render(); };
 const pend = () => S.records.filter(r => r["狀態"] == "待審");
 const chipOf = s => `<span class="chip ${s == "待審" ? "wait" : s == "已發布" ? "ok" : "in"}">${{ "待審": "⏳ 待審", "已發布": "✅ 已上線", "退回": "↩ 已退回", "隱藏": "🔽 已下架" }[s] || s}</span>`;
 const nm = n => E(n || "（未指定）");

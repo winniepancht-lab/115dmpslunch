@@ -55,3 +55,5 @@ select,input,textarea{font:inherit;color:var(--tx)}select{padding:6px 12px;borde
 @media print{body{background:#fff}.ban,.nav,.foot a,.noprint{display:none!important}.w{max-width:none;padding:0}.day,.qi,.rep{break-inside:avoid}.gal{grid-template-columns:repeat(6,1fr)}}
 .ban{max-width:900px;margin:0 auto;border-top:0}
 .ext.pk{background:var(--pk);border-color:#ffc2d9}.ext.pk b{color:var(--rd)}.ext.pk .go{background:var(--rd)}
+
+@media (max-width:520px){h1 small{display:block;margin-top:2px}}
