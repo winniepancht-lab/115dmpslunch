@@ -3,12 +3,12 @@
 // 部署：部署 → 管理部署作業 → 鉛筆圖示 → 版本選「新版本」→ 部署（網址不變）。KEY 沿用原本的指令碼屬性。
 // 試算表「不要」發布到網路，也不要分享給別人；所有資料只由這支程式讀寫。
 
-const VERSION = '3.2';
+const VERSION = '3.3';
 const TZ = 'Asia/Taipei';
 const PHOTO_FOLDER = '東門試菜照片';
 const WINDOW_DAYS = 2;   // 家代可在輪值日當天起、往後 2 天內補填
 const S_REC = '紀錄', S_ISS = '議題', S_SCH = '班表', S_ROS = '家代名冊', S_MENU = '菜單';
-const REC_COLS = ['ID', '日期', '姓名', '班級', '年級', '填報時間', '試菜內容', '照片連結', '狀態', '審核備註', '審核時間', '來源', '菜單圖片'];
+const REC_COLS = ['ID', '日期', '姓名', '班級', '年級', '填報時間', '試菜內容', '照片連結', '狀態', '審核備註', '審核時間', '來源', '菜單圖片', '使用平台照片'];
 const ISS_COLS = ['ID', '日期', '標題', '摘要', '回覆', '狀態', '照片連結', '公開', '建立時間', '更新時間'];
 const SCH_COLS = ['日期', '姓名', '班級'];
 const ROS_COLS = ['姓名', '班級', '年級', 'Token', '啟用', '建立時間'];
@@ -164,10 +164,11 @@ function authorizeAll() {   // 在編輯器執行一次，授權「連外網」�
 function publicData_() {
   const menu = {};
   rows_(tbl_(S_MENU, MENU_COLS)).forEach(function (m) { menu[ds_(m['日期'])] = { d: m['菜色'], s: m['來源'], p: m['顯示照片'] !== '否' && m['平台照片'] && m['平台照片'] !== '[]' ? m['平台照片'] : '' }; });
-  const seen = {};
+  const seen = {}, vote = {};
+  rows_(tbl_(S_REC, REC_COLS)).forEach(function (r) { if (r['狀態'] !== '已發布') return; const d = ds_(r['日期']), v = r['使用平台照片']; if (v === '是') vote[d] = '是'; else if (v === '否' && vote[d] !== '是') vote[d] = '否'; });
   const l = rows_(tbl_(S_REC, REC_COLS)).filter(function (r) { return r['狀態'] === '已發布'; }).map(function (r) {
     const d = ds_(r['日期']), first = !seen[d], m = first && menu[d] ? menu[d] : { d: '', s: '', p: '' }; seen[d] = 1;
-    return { '日期': d, '班級': r['年級'], '午餐菜色': m.d, '菜單來源': m.s, '平台照片': m.p, '家代意見反饋': r['試菜內容'], '照片連結': r['照片連結'], '營養師回應': '', '菜單圖片': r['菜單圖片'] };
+    return { '日期': d, '班級': r['年級'], '午餐菜色': m.d, '菜單來源': m.s, '平台照片': vote[d] === '否' ? '' : m.p, '家代意見反饋': r['試菜內容'], '照片連結': r['照片連結'], '營養師回應': '', '菜單圖片': r['菜單圖片'] };
   });
   const q = rows_(tbl_(S_ISS, ISS_COLS)).filter(function (r) { return r['公開'] !== '否'; }).map(function (r) {
     return { '日期': ds_(r['日期']), '標題': r['標題'], '反映摘要': r['摘要'], '營養師回覆': r['回覆'], '狀態': r['狀態'], '照片連結': r['照片連結'] };
@@ -194,7 +195,7 @@ function repInfo_(tok) {
     open: sched.filter(function (d) { return d <= today && d >= minD; }).map(function (d) {
       const r = rec(d); let m = { dishes: '' };
       try { m = menuFor_(d, fetched++ < 3, false); } catch (e) {}
-      return { d: d, s: r ? r['狀態'] : '', locked: lockedRec(r), text: r ? r['試菜內容'] : '', note: r ? r['審核備註'] : '', nph: r && r['照片連結'] ? r['照片連結'].split(',').filter(Boolean).length : 0, menu: m.dishes || '', menuSrc: m.source || '', pics: m.pics || [] };
+      return { d: d, s: r ? r['狀態'] : '', locked: lockedRec(r), text: r ? r['試菜內容'] : '', note: r ? r['審核備註'] : '', nph: r && r['照片連結'] ? r['照片連結'].split(',').filter(Boolean).length : 0, menu: m.dishes || '', menuSrc: m.source || '', pics: m.pics || [], usePics: !r || r['使用平台照片'] !== '否' };
     }),
     upcoming: sched.filter(function (d) { return d > today; }).slice(0, 5),
     history: mine.sort(function (a, b) { return ds_(a['日期']) < ds_(b['日期']) ? 1 : -1; }).slice(0, 40).map(function (r) {
@@ -215,7 +216,9 @@ function submit_(b) {
   if (ex && (ex['狀態'] === '已發布' || ex['狀態'] === '僅記錄' || (ex['來源'] && ex['來源'] !== '家代填報'))) return err_('這筆已由幹部登錄或已上線，無法修改；如需更正請聯絡幹部');
   let ph = ex ? ex['照片連結'] : '';
   if (photos.length) { trashPhotos_(ph); ph = savePhotos_(photos, date); }
-  const data = { '日期': date, '姓名': rep['姓名'], '班級': rep['班級'], '年級': rep['年級'], '填報時間': now_(), '試菜內容': text, '照片連結': ph, '狀態': '待審', '審核備註': '', '來源': '家代填報' };
+  const data = { '日期': date, '姓名': rep['姓名'], '班級': rep['班級'], '年級': rep['年級'], '填報時間': now_(), '試菜內容': text, '照片連結': ph, '狀態': '待審', '審核備註': '', '來源': '家代填報', '使用平台照片': b.usePics === false ? '否' : '是' };
+  // 家代裝置查到的平台菜單（伺服器沒有存到時才採用；照片網址限平台網域）
+  try { if (b.menu && b.menu.dishes && !menuFor_(date, false, false).dishes) menuSet_({ date: date, dishes: String(b.menu.dishes).slice(0, 300), source: '教育局', pics: b.menu.pics || [] }); } catch (e) {}
   if (ex) set_(t, ex._r, data); else { data['ID'] = id_(); add_(t, data); }
   return { status: 'success', photos: photos.length };
 }
@@ -252,6 +255,7 @@ function recUpdate_(b) {
   if (b.date) o['日期'] = ds_(b.date);
   if (b.name != null) o['姓名'] = b.name;
   if (b.cls != null) { o['班級'] = b.cls; o['年級'] = gradeOf_(b.cls); }
+  if (b.usePics != null) o['使用平台照片'] = b.usePics ? '是' : '否';
   let ph = r['照片連結'].split(',').filter(Boolean);
   (b.removePhotos || []).forEach(function (u) { trashPhotos_(u); ph = ph.filter(function (x) { return x !== u; }); });
   const add = savePhotos_(b.addPhotos, ds_(r['日期'])); if (add) ph = ph.concat(add.split(','));
@@ -269,7 +273,7 @@ function recAdd_(b) {   // 補登：可一次多筆，預設直接上線
     if (name && have.some(function (r) { return r['姓名'] === name && ds_(r['日期']) === d && r['狀態'] !== '隱藏'; })) { skipped.push(d + ' ' + name); return; }
     const st = x.status || '已發布', pub = st !== '待審';
     add_(t, { 'ID': id_(), '日期': d, '姓名': name, '班級': x.cls || '', '年級': gradeOf_(x.cls), '填報時間': now_(), '試菜內容': String(x.text || '').slice(0, 2000),
-      '照片連結': savePhotos_(x.photos, d), '狀態': st, '審核時間': pub ? now_() : '', '來源': x.source || '幹部補登' });
+      '照片連結': savePhotos_(x.photos, d), '狀態': st, '審核時間': pub ? now_() : '', '來源': x.source || '幹部補登', '使用平台照片': x.usePics == null ? '' : (x.usePics ? '是' : '否') });
     have.push({ '姓名': name, '日期': d, '狀態': '已發布' });   // 同一批內的重複也要擋下
     n++;
   });
