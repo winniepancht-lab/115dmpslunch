@@ -28,19 +28,19 @@ ${h.note ? `<p class="mini">幹部備註：${E(h.note)}</p>` : ""}<div class="ht
   if (!ed.length) return;
   const cur = () => ed.find(x => x.d == $("d").value);
   const showMenu = o => {
-    $("menu").innerHTML = o.menu ? `<div class="mbox">📋 <b>當日菜單</b>　${E(o.menu)}<span class="src">${o.menuSrc == "幹部" ? "家長會登錄" : "資料來源：教育部校園食材登錄平台"}</span>${H.moeGal(o.pics, false)}${o.pics && o.pics.length ? '<div class="mini">↑ 平台提供的菜色照片，僅供對照；請另外拍攝實際餐點。</div>' : ""}</div>`
+    $("menu").innerHTML = o.menu ? `<div class="mbox">📋 <b>當日菜單</b>　${E(o.menu)}<span class="src">${o.menuSrc == "幹部" ? "家長會登錄" : "資料來源：教育部校園食材登錄平台"}</span>${H.moeGal(o.pics, false)}${o.pics && o.pics.length ? `<div class="mini">↑ 平台提供的菜色照片，僅供對照；請盡量拍攝實際餐點。</div><label style="font-weight:400"><input type="checkbox" id="up" ${o.usePics === false ? "" : "checked"}> 這天沒有家代照片時，前台顯示上面的平台菜色照片（會標示來源）</label>` : ""}</div>`
       : `<p class="mini">${o.menuTried ? "（這天的菜單尚未登錄在教育部平台，可使用一般範本）" : "正在查詢教育部平台菜單…"}</p>`;
     $("tpls").innerHTML = (o.menu ? '<button type="button" class="g" data-tpl="menu">插入範本（依當日菜單）</button> ' : "") + '<button type="button" class="g" data-tpl="std">插入一般範本</button>'; };
   const sync = async () => { const o = cur(); $("tx").value = o.text || ""; showMenu(o);
     $("note").innerHTML = o.note ? `<p class="msg er">幹部備註：${E(o.note)}</p>` : (o.nph ? `<p class="mu">已上傳 ${o.nph} 張照片；若要換照片請重新選擇，沒選則保留原照片。</p>` : "");
-    if (!o.menu && !o.menuTried) { const r = await H.moeFetch(o.d); o.menuTried = true; if (r.dishes.length) { o.menu = r.dishes.map(x => x.n).join("、"); o.menuSrc = "教育局"; o.pics = r.dishes.filter(x => x.u); } if (cur() == o) showMenu(o); } };
+    if (!o.menu && !o.menuTried) { const r = await H.moeFetch(o.d); o.menuTried = true; if (r.dishes.length) { o.menu = r.dishes.map(x => x.n).join("、"); o.menuSrc = "教育局"; o.pics = r.dishes.filter(x => x.u); o.menuLocal = true; } if (cur() == o) showMenu(o); } };
   $("d").onchange = sync; sync();
   $("tpls").onclick = e => { const k = e.target.dataset.tpl; if (!k) return; const t = $("tx"); t.value += (t.value && !t.value.endsWith("\n") ? "\n" : "") + H.dishTpl(k == "menu" ? cur().menu : ""); t.focus(); };
   $("ph").onchange = async e => { pics = []; $("th").innerHTML = ""; for (const f of e.target.files) { const p = await H.shrink(f); if (p) pics.push(p); else $("m").textContent = "有照片格式無法讀取（例如 HEIC），請改選 JPG/PNG"; } $("th").innerHTML = pics.map(p => `<img src="${p.u}" alt="">`).join(""); };
   $("go").onclick = async () => {
     const m = $("m"), b = $("go"); if (!$("tx").value.trim() && !pics.length) { m.className = "msg er"; m.textContent = "請填寫試菜心得或選照片"; return; }
     b.disabled = true; m.className = "msg"; m.textContent = "送出中…（有照片會比較久）";
-    try { const r = await post({ type: "submit", t: tok, date: $("d").value, text: $("tx").value.trim(), photos: pics.map(p => p.b64) });
+    try { const o = cur(), r = await post({ type: "submit", t: tok, date: $("d").value, text: $("tx").value.trim(), photos: pics.map(p => p.b64), usePics: $("up") ? $("up").checked : true, menu: o.menuLocal ? { dishes: o.menu, pics: o.pics } : undefined });
       if (r.status !== "success") throw new Error(r.message); pics = []; await load(); $("app").insertAdjacentHTML("afterbegin", '<div class="msg ok">✅ 已送出，等待幹部審核。謝謝您！</div>');
     } catch (e) { m.className = "msg er"; m.textContent = "⚠️ " + (e.message === "Failed to fetch" ? "無法確認是否成功，請稍後重新整理確認，避免重複送出" : e.message); b.disabled = false; }
   };

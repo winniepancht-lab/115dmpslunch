@@ -121,7 +121,9 @@ H.moeDishes = (o, out = []) => {
 const findKeys = (o, re, out = []) => { if (Array.isArray(o)) o.forEach(x => findKeys(x, re, out)); else if (o && typeof o == "object") for (const k in o) { if (re.test(k) && /string|number/.test(typeof o[k])) out.push(String(o[k])); else findKeys(o[k], re, out); } return out; };
 // 由使用者的瀏覽器直接向平台查詢（伺服器查不到時的備援）
 H.moeFetch = async date => { const log = [];
-  const get = async u => { const r = await fetch(u, { headers: { Accept: "application/json" } }); log.push(r.status + " " + u); return r.json(); };
+  const get = async u => { const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 9000);
+    try { const r = await fetch(u, { headers: { Accept: "application/json" }, signal: ac.signal }); log.push(r.status + " " + u); return await r.json(); }
+    catch (e) { throw new Error(e.name == "AbortError" ? "平台回應逾時" : e.message); } finally { clearTimeout(tm); } };
   try { const j = await get(`${H.MOE}/offered/meal?KitchenId=all&MenuType=1&period=${date}&SchoolId=${H.SCHOOL_ID}`); let dishes = H.moeDishes(j);
     if (!dishes.length) for (const id of findKeys(j, /^batchdataid$/i)) { dishes = H.moeDishes(await get(`${H.MOE}/dish?BatchDataId=${encodeURIComponent(id)}`)); if (dishes.length) break; }
     return { dishes, log };
