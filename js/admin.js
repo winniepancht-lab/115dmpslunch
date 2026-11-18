@@ -1,7 +1,7 @@
 (() => {
 const C = window.CONFIG, { $, E, md, wd } = H, p2 = n => String(n).padStart(2, "0");
 let KEY = localStorage.getItem("dmpa_key") || "", S = null, tab = "pend", edit = null, batch = [], dn = [];
-const rf = { q: "", s: "", n: 60, from: "", to: "" }, mm = { from: "", to: "", msg: "", stop: false, mon: "" }, openRec = new Set(), sts = { q: "", sort: "cls", dir: 1, grade: "", f: "all", per: "all" }, dly = { pre: "week", miss: false }, lk = { q: "", f: "all", grade: "", sort: "cls" };
+const rf = { q: "", s: "", n: 60, from: "", to: "" }, mm = { from: "", to: "", msg: "", stop: false, mon: "" }, openRec = new Set(), sts = { q: "", sort: "cls", dir: 1, grade: "", f: "all", per: "all" }, dly = { pre: "week", miss: false }, lk = { q: "", f: "all", grade: "", sort: "cls", d: "" };
 
 //PARSE-START
 const SKIP = new Set(["試菜人員", "家長：", "家長:", "家長", "行政代表", "家長代表", "試吃意見", "輪值時間", "人員"]);
@@ -50,7 +50,7 @@ const weekdays = (from, to) => { const o = []; for (let d = from; d && to && d <
 let tt; const toast = (t, er) => { const e = $("toast"); e.textContent = t; e.className = er ? "er" : ""; e.style.display = "block"; clearTimeout(tt); tt = setTimeout(() => e.style.display = "none", 3800); };
 const run = async (fn, ok, btn) => { if (btn) btn.disabled = true; try { const r = await fn(); if (ok) toast(typeof ok == "function" ? ok(r) : ok); return r === undefined ? true : r; }
   catch (e) { toast("⚠️ " + (e.message == "Failed to fetch" ? "連線失敗，請先確認是否已送出，避免重複" : e.message), 1); return null; } finally { if (btn) btn.disabled = false; } };
-const FRONT = "3.3", verWarn = () => S.version == FRONT ? "" : `<div class="warn">⚠️ 後端 Apps Script 是 ${E(S.version)} 版，網頁是 ${FRONT} 版，部分功能會異常。請貼上最新的 Google_Apps_Script.js 並部署為「新版本」。</div>`;
+const FRONT = "3.4", verWarn = () => S.version == FRONT ? "" : `<div class="warn">⚠️ 後端 Apps Script 是 ${E(S.version)} 版，網頁是 ${FRONT} 版，部分功能會異常。請貼上最新的 Google_Apps_Script.js 並部署為「新版本」。</div>`;
 const reload = async () => { S = await api("state"); if (!S.records) throw new Error("Apps Script 還不是 v3 版：請貼上新的 Google_Apps_Script.js 並部署為「新版本」"); render(); };
 const gradeOf = c => (String(c || "").match(/[1-6]/) || [""])[0], GN = { 1: "一", 2: "二", 3: "三", 4: "四", 5: "五", 6: "六" };
 const ck = c => { const m = String(c || "").split("/")[0].match(/(\d)(\d{2})([A-Za-z]?)/); return m ? [+m[1], +m[2], m[3]] : [9, 99, ""]; };
@@ -93,15 +93,15 @@ ${r["審核備註"] ? `<p class="mini">備註：${E(r["審核備註"])}</p>` : "
 ${ph.length ? `<div class="pks">${ph.map(u => `<div class="pk"><a href="${E(H.big(u))}" target="_blank" rel="noopener"><img src="${E(H.thumb(u))}" loading="lazy" referrerpolicy="no-referrer" alt=""></a><label><input type="checkbox" data-rm="${E(u)}"> 移除</label></div>`).join("")}</div>` : ""}
 <textarea data-k="text">${E(r["試菜內容"])}</textarea>
 <div class="mini">追加照片：<input type="file" data-k="add" accept="image/*" multiple></div>
-<label class="mini" style="font-weight:400"><input type="checkbox" data-k="up" ${r["使用平台照片"] != "否" ? "checked" : ""}> 這天沒有家代照片時，前台顯示教育部平台菜色照片</label>
+<div class="opts mini"><label><input type="checkbox" data-k="um" ${r["使用平台菜單"] != "否" ? "checked" : ""}> 前台顯示平台菜單、營養與食材</label><label><input type="checkbox" data-k="up" ${r["使用平台照片"] != "否" ? "checked" : ""}> 前台顯示平台菜色照片（與家代實拍分開標示）</label></div>
 <div><input data-k="note" placeholder="退回原因（家代看得到）" style="margin-top:6px">${acts}</div></div>`; };
 async function recAct(b) {
   const card = b.closest(".rv"), id = card.dataset.id, a = b.dataset.a, q = k => card.querySelector(`[data-k=${k}]`);
   const text = q("text").value, note = q("note").value, rm = [...card.querySelectorAll("[data-rm]:checked")].map(x => x.dataset.rm), add = [];
   for (const f of q("add").files) { const p = await H.shrink(f); if (p) add.push(p.b64); }
-  const orig = S.records.find(r => r.ID == id), up = q("up").checked, upCh = up != (orig["使用平台照片"] != "否"), changed = text != orig["試菜內容"] || rm.length || add.length || upCh;
+  const orig = S.records.find(r => r.ID == id), up = q("up").checked, upCh = up != (orig["使用平台照片"] != "否"), um = q("um").checked, umCh = um != (orig["使用平台菜單"] != "否"), changed = text != orig["試菜內容"] || rm.length || add.length || upCh || umCh;
   if (a == "del" && !confirm("確定刪除這筆紀錄與照片？無法復原。")) return;
-  run(async () => { if (a != "del" && (changed || a == "save")) await api("rec_update", Object.assign({ id, text, removePhotos: rm, addPhotos: add }, upCh ? { usePics: up } : {}));
+  run(async () => { if (a != "del" && (changed || a == "save")) await api("rec_update", Object.assign({ id, text, removePhotos: rm, addPhotos: add }, upCh ? { usePics: up } : {}, umCh ? { useMenu: um } : {}));
     if (a == "ok") await api("rec_status", { id, status: "已發布" }); if (a == "no") await api("rec_status", { id, status: "退回", note }); if (a == "hide") await api("rec_status", { id, status: "隱藏" });
     if (a == "del") await api("rec_delete", { id }); await reload(); }, { ok: "✅ 已核可上線", no: "已退回", hide: "已下架", save: "已儲存", del: "已刪除" }[a], b); }
 
@@ -110,7 +110,7 @@ function pPend() {
   const p = pend().sort((a, b) => a["日期"] < b["日期"] ? 1 : -1), today = S.schedule.filter(x => x.d == S.today), wk = H.monday(S.today);
   const missWk = stats().reduce((a, x) => a + x.sdAll.filter(d => d >= wk && d < S.today && !S.records.some(r => r["姓名"] == x.n && r["日期"] == d)).length, 0), trk = S.issues.filter(i => i["狀態"] == "追蹤中").length;
   return `<div class="st"><div><b>${p.length}</b>⏳ 待審核</div><div><b>${today.filter(x => stOf(x.n, S.today) != "today").length}/${today.length}</b>📅 今日已填</div><div><b>${missWk}</b>❌ 本週缺填</div><div><b>${trk}</b>💬 追蹤中議題</div></div>
-${today.length ? `<section class="f"><h2>今日輪值（${md(S.today)}）</h2><div class="cxs">${today.map(x => cx(x.n, S.today, ` <span class="mini">${E(x.c)}</span>`)).join("")}</div></section>` : ""}
+${today.length ? `<section class="f"><h2>今日輪值（${md(S.today)}）</h2><div class="cxs">${today.map(x => cx(x.n, S.today, ` <span class="mini">${E(x.c)}</span>`)).join("")}</div><button class="g" data-act="todayqr">📱 今日試菜代表 QR Code</button></section>` : ""}
 <section class="f"><h2>待審核（${p.length}）</h2>${p.length ? `<button data-act="all">✅ 全部核可上線（${p.length}）</button><span class="mini">逐筆檢查文字與照片後，也可一次上線</span>` : '<div class="empty">🎉 沒有待審核的紀錄</div>'}</section><div class="rvs">${p.map(recCard).join("")}</div>`; }
 
 // ---------- 補登 ----------
@@ -118,38 +118,46 @@ let aPics = [], aMenu = null;
 const pAdd = () => fold("add1", "✏️ 補登單筆紀錄", `
 <div class="row"><div><label>日期</label><input type="date" id="a-d" value="${S.today}"></div><div><label>家代</label><select id="a-r">${repOpts()}</select></div></div>
 <div class="row" id="a-o" style="display:none"><div><label>姓名</label><input id="a-n"></div><div><label>班級</label><input id="a-c" placeholder="例如 206"></div></div>
-<div id="a-menu"></div><label>當日菜色（選填；可按上方「帶入菜色欄」或自行填寫）</label><input id="a-m"><label>試菜心得</label><button type="button" class="g" id="a-tpl">插入範本（依菜色欄；空白則用一般範本）</button><textarea id="a-t"></textarea>
+<div id="a-menu"></div><label>手動菜色（選填；沒有平台菜單或不帶入時，前台顯示這裡）</label><input id="a-m" placeholder="例如：糙米飯、三杯雞、炒青菜、味噌湯"><label>試菜心得</label><button type="button" class="g" id="a-tpl">✏️ 插入填寫範本</button><span class="mini" id="a-tplh"></span><textarea id="a-t"></textarea>
 <label>照片</label><input type="file" id="a-p" accept="image/*" multiple><div class="th" id="a-th"></div>
 <label style="font-weight:400"><input type="checkbox" id="a-pub" checked> 直接上線（取消勾選則放入待審）</label><button id="a-go">送出補登</button>`) + fold("add2", "📋 匯入已完成名單（內容暫填「試菜完成」）", `<p class="mini">貼上「日期＋姓名」清單（每行一筆，一行可有多位姓名；也可寫「日期＋班級」，系統依班表找人），或選擇 Excel／CSV 檔案。</p>
 <textarea id="d-t" placeholder="11/9 李俞佑 黃鳳盈&#10;2026/11/10 王小明&#10;11/12 206"></textarea><div class="mini">或選檔案：<input type="file" id="d-f" accept=".xlsx,.xls,.csv"></div>
 <button class="g" id="d-parse">解析</button><div id="d-out"></div>`) + fold("add3", "💬 批次補登（貼上 LINE 文字，一次上線）", `<p class="mini">可貼單日文字，或整份 LINE 匯出（會依日期自動分開）。系統依班表自動對應家代，確認後一次上線；照片請之後在「紀錄」追加。</p>
 <textarea id="b-t" placeholder="貼上 LINE 試菜文字…"></textarea><div class="row"><div><label>無日期時使用</label><input type="date" id="b-d" value="${S.today}"></div></div><button class="g" id="b-parse">解析</button><div id="b-out"></div>`);
-const dishTpl = m => (String(m || "").split(/[、，,\n]+/).map(s => s.trim()).filter(Boolean).length ? String(m).split(/[、，,\n]+/).map(s => s.trim()).filter(Boolean) : ["白飯", "主菜", "副菜", "青菜", "湯"]).map(d => d + "：").join("\n") + "\n整體：";
-async function getMenu(date, force) { let r;
-  try { r = await api("menu_get", { date, force: !!force }, 25000); } catch (e) { r = { dishes: "", source: "", showPics: true, failed: true, log: ["伺服器：" + e.message] }; }
-  r.pics = r.pics || [];
-  if (r.failed || r.skipped) { const c = await H.moeFetch(date);
-    if (c.dishes.length) { const manual = !!r.dishes && r.source == "幹部";
-      await api("menu_set", Object.assign({ date, pics: c.dishes.filter(d => d.u) }, manual ? {} : { dishes: c.dishes.map(d => d.n).join("、"), source: "教育局" }));
-      r = await api("menu_get", { date, fetch: false }); r.pics = r.pics || []; r.via = 1; r.kept = manual; }
-    else { r.failed = true; r.clog = c.log; } }
-  r.date = date; return r; }
-async function syncMenus(dates, force) { let ok = 0, fail = 0; for (let i = 0; i < dates.length; i++) { toast(`同步教育局菜單 ${i + 1}/${dates.length}…`); try { const r = await getMenu(dates[i], force); r.dishes ? ok++ : fail++; } catch (e) { fail++; } } return { ok, fail }; }
+const dishTplOld = m => (String(m || "").split(/[、，,\n]+/).map(s => s.trim()).filter(Boolean).length ? String(m).split(/[、，,\n]+/).map(s => s.trim()).filter(Boolean) : ["白飯", "主菜", "副菜", "青菜", "湯"]).map(d => d + "：").join("\n") + "\n整體：";
+// 取得某日平台菜單：先看已存的 → 沒有就由這台裝置的瀏覽器向平台查（較快）→ 再不行請伺服器查
+async function getMenu(date, force, withIng = true) { let r = null;
+  try { r = await api("menu_get", { date, fetch: false }, 20000); } catch (e) {}
+  if (r && r.plat && r.plat.length && !force) { r.date = date; return r; }
+  const c = await H.moeFetch(date, withIng);
+  if (c.dishes.length) { await api("menu_set", { date, platform: { dishes: c.dishes.map(d => ({ n: d.n, t: d.t, u: d.u })), nut: c.nut, ing: withIng ? c.ing : undefined } }); r = await api("menu_get", { date, fetch: false }); r.via = 1; }
+  else { let sv; try { sv = await api("menu_get", { date, force: true, ing: withIng }, 40000); } catch (e) { sv = { failed: true, log: ["伺服器：" + e.message] }; }
+    if (sv && sv.plat && sv.plat.length && !sv.failed) r = sv; else r = Object.assign(r || { dishes: "", source: "" }, { failed: true, log: (sv && sv.log) || [], clog: c.log, raw: (sv && sv.raw) || "" }); }
+  r.plat = r.plat || []; r.pics = r.pics || []; r.date = date; return r; }
+async function syncMenus(dates, force) { let ok = 0, fail = 0; for (let i = 0; i < dates.length; i++) { toast(`同步教育局菜單 ${i + 1}/${dates.length}…`); try { const r = await getMenu(dates[i], force); r.plat.length ? ok++ : fail++; } catch (e) { fail++; } } return { ok, fail }; }
 function bindAdd() {
-  const fillMenu = async () => { const d = $("a-d").value, box = $("a-menu"); if (!d) return; box.innerHTML = '<p class="mini">正在查詢教育部平台菜單…（最久約 30 秒）</p>';
+  const ta = $("a-t"), useM = () => !!$("a-um") && $("a-um").checked && aMenu && aMenu.plat.length;
+  const tplH = () => { $("a-tplh").textContent = useM() ? "（依當日平台菜單）" : $("a-m").value.trim() ? "（依手動菜色）" : "（一般範本）"; };
+  const tplNow = () => H.dishTpl(useM() ? aMenu.plat : $("a-m").value);
+  const fillMenu = async () => { const d = $("a-d").value, box = $("a-menu"); if (!d) return; box.innerHTML = '<p class="mini">正在查詢教育部平台菜單…</p>';
     try { aMenu = await getMenu(d); } catch (e) { aMenu = null; }
     if (!$("a-d") || $("a-d").value != d) return;
-    $("a-menu").innerHTML = aMenu && aMenu.dishes ? `<div class="mbox">📋 <b>${aMenu.source == "幹部" ? "已登錄菜單" : "教育部平台菜單"}</b>　${E(aMenu.dishes)}<br><button type="button" class="g" id="a-use">帶入菜色欄</button>${aMenu.pics.length ? `${H.moeGal(aMenu.pics, false)}<label style="font-weight:400"><input type="checkbox" id="a-up" checked> 帶入平台菜色照片：這天沒有家代照片時，前台顯示上面的照片（會標示來源）</label>` : '<div class="mini">（平台沒有這天的菜色照片）</div>'}</div>`
-      : `<p class="mini">（查不到 ${md(d)} 的平台菜單，可手動填寫菜色）<button type="button" class="g" id="a-re">重試</button></p>`;
-    if ($("a-use")) $("a-use").onclick = () => { $("a-m").value = aMenu.dishes; }; if ($("a-re")) $("a-re").onclick = fillMenu; };
+    $("a-menu").innerHTML = aMenu && aMenu.plat.length ? `<div class="mbox"><b>📋 教育部平台菜單</b>${aMenu.via ? '<span class="src">剛由這台裝置取得</span>' : ""}${H.platMenu(aMenu.plat)}${H.nutHtml(aMenu.nut)}${H.ingHtml(aMenu.ing)}
+${aMenu.pics.length ? `<details class="pv"><summary class="mini">看平台菜色照片（${aMenu.pics.length} 張）</summary>${H.moeGal(aMenu.pics, false)}</details>` : ""}
+<div class="opts"><label><input type="checkbox" id="a-um" checked> 帶入平台菜單（前台顯示菜單、營養與食材）</label>${aMenu.pics.length ? '<label><input type="checkbox" id="a-up" checked> 帶入平台菜色照片（與家代實拍分開標示）</label>' : ""}</div></div>`
+      : `<p class="mini">（查不到 ${md(d)} 的平台菜單，可在下方手動填寫菜色）<button type="button" class="g" id="a-re">重試</button></p>`;
+    tplH(); if ($("a-re")) $("a-re").onclick = fillMenu;
+    if ($("a-um")) $("a-um").onchange = () => { tplH(); if (H.isTpl(ta) && ta.value.trim()) H.putTpl(ta, tplNow()); }; };
   $("a-d").onchange = () => { $("a-m").value = ""; fillMenu(); }; fillMenu();
+  $("a-m").oninput = tplH;
   $("a-r").onchange = () => $("a-o").style.display = $("a-r").value ? "none" : ""; $("a-r").dispatchEvent(new Event("change"));
-  $("a-tpl").onclick = () => { const t = $("a-t"); t.value += (t.value && !t.value.endsWith("\n") ? "\n" : "") + H.dishTpl($("a-m").value); t.focus(); };
+  $("a-tpl").onclick = () => H.putTpl(ta, tplNow());
   $("a-p").onchange = async e => { aPics = []; for (const f of e.target.files) { const p = await H.shrink(f); if (p) aPics.push(p); } $("a-th").innerHTML = aPics.map(p => `<img src="${p.u}" alt="">`).join(""); };
   $("a-go").onclick = () => { const rp = S.roster.find(r => r["姓名"] == $("a-r").value), t = $("a-t").value.trim(); if (!t && !aPics.length) return toast("請填寫心得或選照片", 1);
     const mv = $("a-m").value.trim(), dv = $("a-d").value;
-    run(async () => { const r = await api("rec_add", { items: [{ date: dv, name: rp ? rp["姓名"] : $("a-n").value.trim(), cls: rp ? rp["班級"] : $("a-c").value.trim(), text: t, photos: aPics.map(p => p.b64), status: $("a-pub").checked ? "已發布" : "待審", usePics: $("a-up") ? $("a-up").checked : undefined }] });
-      if (mv && (!aMenu || mv != aMenu.dishes)) await api("menu_set", { date: dv, dishes: mv, source: "幹部" }); aPics = []; await reload(); return r; }, r => r.skipped.length ? "這位家代這天已有紀錄，已略過" : "✅ 已補登", $("a-go")); };
+    run(async () => { if (H.isTpl(ta) && ta.value.trim() && !aPics.length && !confirm("範本還沒填寫內容，確定要送出嗎？")) return null;
+      const r = await api("rec_add", { items: [{ date: dv, name: rp ? rp["姓名"] : $("a-n").value.trim(), cls: rp ? rp["班級"] : $("a-c").value.trim(), text: t, photos: aPics.map(p => p.b64), status: $("a-pub").checked ? "已發布" : "待審", usePics: $("a-up") ? $("a-up").checked : undefined, useMenu: $("a-um") ? $("a-um").checked : undefined }] });
+      if (mv && (!aMenu || mv != aMenu.dishes)) await api("menu_set", { date: dv, dishes: mv, source: "幹部" }); ta.dataset.tpl = ""; aPics = []; await reload(); return r; }, r => !r ? "" : r.skipped.length ? "這位家代這天已有紀錄，已略過" : "✅ 已補登", $("a-go")); };
   // 已完成名單
   const lib = () => window.XLSX ? Promise.resolve() : new Promise((ok, no) => { const s = document.createElement("script"); s.src = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
   $("d-f").onchange = e => run(async () => { const f = e.target.files[0]; if (!f) return; await lib(); const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
@@ -228,23 +236,55 @@ ${rows.length ? `<div class="tb-w"><table class="tb"><tr><th>日期</th><th>統�
 
 // ---------- 家代與設定 ----------
 const link = r => new URL("rep.html?t=" + r["Token"], location.href).href;
-function linkRows() { const q = lk.q.trim(), sc = n => S.schedule.filter(x => x.n == n).length, dn_ = n => S.records.filter(r => r["姓名"] == n && DONE.has(r["狀態"])).length;
-  return S.roster.filter(r => (!lk.grade || r["年級"] == lk.grade) && (!q || (r["姓名"] + r["班級"]).includes(q)) && ({ all: 1, off: r["啟用"] == "否", sched: sc(r["姓名"]) > 0, nosch: !sc(r["姓名"]) }[lk.f]))
+function linkRows() { const q = lk.q.trim(), sc = n => S.schedule.filter(x => x.n == n).length, dn_ = n => S.records.filter(r => r["姓名"] == n && DONE.has(r["狀態"])).length, onDay = lk.d ? new Set(S.schedule.filter(x => x.d == lk.d).map(x => x.n)) : null;
+  return S.roster.filter(r => (!onDay || onDay.has(r["姓名"])) && (!lk.grade || r["年級"] == lk.grade) && (!q || (r["姓名"] + r["班級"]).includes(q)) && ({ all: 1, off: r["啟用"] == "否", sched: sc(r["姓名"]) > 0, nosch: !sc(r["姓名"]) }[lk.f]))
     .sort((a, b) => lk.sort == "name" ? a["姓名"].localeCompare(b["姓名"], "zh-Hant") : cmpCls(a["班級"], b["班級"])).map(r => ({ r, sc: sc(r["姓名"]), dn: dn_(r["姓名"]) })); }
+// ---- QR Code 圖卡：【yyyy/mm/dd 試菜代表】＋班級姓名
+const nextDuty = n => (S.schedule.filter(x => x.n == n && x.d >= S.today).map(x => x.d).sort()[0]) || "";
+const qrDate = n => lk.d || nextDuty(n) || S.today;
+function qrCard(r, date) { const W = 640, c = document.createElement("canvas"), x = c.getContext("2d"), q = QR.make(link(r)), px = Math.floor(470 / (q.size + 8)), qs = (q.size + 8) * px, H0 = 120 + qs + 190;
+  c.width = W; c.height = H0; x.fillStyle = "#fff8ef"; x.fillRect(0, 0, W, H0);
+  x.fillStyle = "#fff"; x.strokeStyle = "#f0e3d2"; x.lineWidth = 4; const rr = (a, b, w, h, k) => { x.beginPath(); x.moveTo(a + k, b); x.arcTo(a + w, b, a + w, b + h, k); x.arcTo(a + w, b + h, a, b + h, k); x.arcTo(a, b + h, a, b, k); x.arcTo(a, b, a + w, b, k); x.closePath(); };
+  rr(16, 16, W - 32, H0 - 32, 28); x.fill(); x.stroke();
+  const F = '"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'; x.textAlign = "center";
+  x.fillStyle = "#3f7ddb"; x.font = `700 30px ${F}`; x.fillText("🍱 東門國小 營養午餐試菜", W / 2, 70);
+  x.fillStyle = "#8a869a"; x.font = `400 20px ${F}`; x.fillText("掃描 QR Code 填寫試菜紀錄", W / 2, 102);
+  QR.draw(x, q, (W - qs) / 2, 116, px);
+  const y0 = 116 + qs + 52; x.fillStyle = "#ef6f5e"; x.font = `700 34px ${F}`; x.fillText(`【${date.replace(/-/g, "/")} 試菜代表】`, W / 2, y0);
+  x.fillStyle = "#3a3748"; x.font = `700 38px ${F}`; x.fillText(`${r["班級"]} ${r["姓名"]}`, W / 2, y0 + 54);
+  x.fillStyle = "#8a869a"; x.font = `400 19px ${F}`; x.fillText("個人專屬連結，請勿轉傳給其他人", W / 2, y0 + 96);
+  return c; }
+function qrSheet(rs, date) { const cards = rs.map(r => qrCard(r, date)), cols = cards.length > 1 ? 2 : 1, w = cards[0].width, h = cards[0].height, top = 70, c = document.createElement("canvas"), x = c.getContext("2d");
+  c.width = cols * w; c.height = top + Math.ceil(cards.length / cols) * h; x.fillStyle = "#fff8ef"; x.fillRect(0, 0, c.width, c.height);
+  x.fillStyle = "#3a3748"; x.textAlign = "center"; x.font = '700 32px "Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif'; x.fillText(`${date.replace(/-/g, "/")}（${wd(date)}）營養午餐試菜代表`, c.width / 2, 48);
+  cards.forEach((k, i) => x.drawImage(k, (i % cols) * w, top + Math.floor(i / cols) * h)); return c; }
+const fileOf = (c, name) => new Promise(res => c.toBlob(b => res(new File([b], name, { type: "image/png" })), "image/png"));
+function qrModal(c, name, text) { let m = $("qrm"); if (!m) { m = document.createElement("div"); m.id = "qrm"; document.body.appendChild(m); m.onclick = e => { if (e.target == m || e.target.dataset.x != null) m.classList.remove("on"); }; }
+  const url = c.toDataURL("image/png");
+  m.innerHTML = `<div class="box"><img src="${url}" alt="${E(text)}"><div class="acts"><a class="btn" href="${url}" download="${E(name)}">⬇️ 下載圖片</a>${navigator.share ? '<button id="qr-share">📤 分享（LINE 等）</button>' : ""}<button class="g" data-x>關閉</button></div><p class="mini">手機可長按圖片儲存；圖上的 QR Code 掃描後會直接開啟填寫頁。</p></div>`;
+  m.classList.add("on"); if ($("qr-share")) $("qr-share").onclick = async () => { try { const f = await fileOf(c, name); await navigator.share({ files: [f], title: text }); } catch (e) { if (e.name != "AbortError") toast("此裝置不支援直接分享，請改用下載", 1); } }; }
 function pSet() { const lr = linkRows(), months = [...new Set(S.menu.map(m => m["日期"].slice(0, 7)))].sort().reverse(); if (!mm.from) { mm.from = H.addDays(S.today, -13); mm.to = S.today; } if (!months.includes(mm.mon)) mm.mon = months[0] || "";
   const menus = S.menu.filter(m => m["日期"].startsWith(mm.mon)).sort((a, b) => a["日期"] < b["日期"] ? 1 : -1);
-  return fold("links", `👪 家代個人填寫連結（${S.roster.length} 位）`, `<p class="mini">每位家代用自己的連結填寫，只看得到自己的輪值日。連結外流時按「重產」即可作廢舊連結。</p>
+  const dayN = lk.d ? new Set(S.schedule.filter(x => x.d == lk.d).map(x => x.n)).size : 0;
+  return fold("links", `👪 家代個人填寫連結與 QR Code（${S.roster.length} 位）`, `<p class="mini">每位家代用自己的連結（或 QR Code）填寫，只看得到自己的輪值日。選「輪值日期」可直接找出當天的試菜代表；QR 圖卡會標示【日期 試菜代表】與班級姓名。</p>
+<div class="row"><div><label>輪值日期</label><input type="date" id="l-d" value="${lk.d}"></div><div><label class="sp">&nbsp;</label>${seg("ld", "", [["today", "今天"], ["tmr", "明天"], ["clear", "不限日期"]])}</div></div>
 <div class="row"><div><input id="l-q" placeholder="搜尋姓名／班級" value="${E(lk.q)}"></div><div><select id="l-grade"><option value="">全部年級</option>${[1, 2, 3, 4, 5, 6].map(g => `<option value="${g}" ${lk.grade == g ? "selected" : ""}>${GN[g]}年級</option>`).join("")}</select></div>
 <div><select id="l-f">${[["all", "全部"], ["sched", "有排班"], ["nosch", "尚未排班"], ["off", "已停用"]].map(([k, v]) => `<option value="${k}" ${lk.f == k ? "selected" : ""}>${v}</option>`).join("")}</select></div><div><select id="l-sort"><option value="cls">依班級</option><option value="name" ${lk.sort == "name" ? "selected" : ""}>依姓名</option></select></div></div>
-<p class="mini">顯示 ${lr.length} / ${S.roster.length} 位</p><div class="tb-w"><table class="tb cards"><tr><th>班級</th><th>姓名</th><th>排班／已試</th><th>連結</th></tr>${lr.map(({ r, sc, dn }) => `<tr><td data-l="班級">${E(r["班級"])}</td><td data-l="姓名">${E(r["姓名"])}${r["啟用"] == "否" ? " <span class='chip in'>停用</span>" : ""}</td><td data-l="排班／已試">${sc}／${dn}</td><td class="acts"><button class="g" data-cp="${E(r["姓名"])}">複製連結</button><button class="g" data-cm="${E(r["姓名"])}">複製邀請訊息</button><button class="g" data-nt="${E(r["姓名"])}">重產</button><button class="g" data-en="${E(r["姓名"])}" data-v="${r["啟用"] == "否" ? 1 : 0}">${r["啟用"] == "否" ? "啟用" : "停用"}</button></td></tr>`).join("")}</table></div><button class="g" data-act="lcsv">⬇️ 下載目前列表連結 CSV</button>`)
-+ fold("menu", `🍱 教育部平台菜單與菜色照片（已存 ${S.menu.length} 天）`, `<p class="mini">系統會向「教育部校園食材登錄平台」查詢東門國小的每日菜單與菜色照片，存起來後用在家代填寫頁、補登與前台（前台會標示資料來源）。家代頁與補登選日期時會自動查詢；這裡可以一次同步一段期間（包含較早的日期）、修改菜色，或關閉某天的平台照片。</p>
+${lk.d ? `<div class="dayqr">📅 <b>${md(lk.d)}（${wd(lk.d)}）</b>輪值 ${dayN} 位${dayN ? ` <button data-act="dayqr">📱 這天全部 QR（合併成一張圖）</button>` : '<span class="mini">　這天沒有排班</span>'}</div>` : ""}
+<p class="mini">顯示 ${lr.length} / ${S.roster.length} 位</p><div class="tb-w"><table class="tb cards"><tr><th>班級</th><th>姓名</th><th>排班／已試</th><th>${lk.d ? "" : "下次輪值"}</th><th>連結</th></tr>${lr.map(({ r, sc, dn }) => `<tr><td data-l="班級">${E(r["班級"])}</td><td data-l="姓名">${E(r["姓名"])}${r["啟用"] == "否" ? " <span class='chip in'>停用</span>" : ""}</td><td data-l="排班／已試">${sc}／${dn}</td><td data-l="下次輪值">${lk.d ? cx(r["姓名"], lk.d) : nextDuty(r["姓名"]) ? md(nextDuty(r["姓名"])) : "—"}</td><td class="acts"><button data-qr="${E(r["姓名"])}">📱 QR</button><button class="g" data-cp="${E(r["姓名"])}">複製連結</button><button class="g" data-cm="${E(r["姓名"])}">複製邀請訊息</button><button class="g" data-nt="${E(r["姓名"])}">重產</button><button class="g" data-en="${E(r["姓名"])}" data-v="${r["啟用"] == "否" ? 1 : 0}">${r["啟用"] == "否" ? "啟用" : "停用"}</button></td></tr>`).join("")}</table></div>
+<button class="g" data-act="lcsv">⬇️ 下載目前列表連結 CSV</button>
+<div class="danger"><b>🔄 整批重設全部連結</b><p class="mini">所有家代的連結與 QR Code 會一起更換，舊的立即失效（適合每月更換一次）。重設後請重新傳送新的 QR Code。</p><button class="r" data-act="resetall">整批重設全部連結</button></div>`)
++ fold("menu", `🍱 教育部平台菜單、營養與菜色照片（已存 ${S.menu.length} 天）`, `<p class="mini">向「教育部校園食材登錄平台」取得每日菜單（含類別）、營養份量、熱量、食材產地與菜色照片。家代頁與補登選日期時會自動取得；這裡可一次同步一段期間，並逐日決定前台要不要顯示。</p>
+<p class="mini"><b>顯示設定</b>：「自動」＝依家代／補登時的勾選；「顯示」＝不論家代選擇都顯示（平台照片會和家代實拍並列、分開標示）；「不顯示」＝前台不出現。</p>
 <div class="row"><div><label>從</label><input type="date" id="m-f" value="${mm.from}"></div><div><label>到</label><input type="date" id="m-t" value="${mm.to}"></div></div>
 ${seg("mq", "", [["d1", "今天"], ["d14", "近14天"], ["d30", "近30天"], ["mon", "本月"], ["pmon", "上個月"], ["sem", "本學期"]])}
-<label style="font-weight:400"><input type="checkbox" id="m-force"> 已有菜單的日子也重新查詢（手動填的菜色會保留）</label>
+<div class="row"><div><label>同步後：平台菜單</label><select id="m-sm"><option value="">維持原設定</option><option value="自動">自動</option><option value="是">顯示</option><option value="否">不顯示</option></select></div><div><label>同步後：平台照片</label><select id="m-sp"><option value="">維持原設定</option><option value="自動">自動</option><option value="是">顯示</option><option value="否">不顯示</option></select></div></div>
+<label style="font-weight:400"><input type="checkbox" id="m-ing" checked> 一併取得食材與產地（每天多查幾次，較慢）</label><label style="font-weight:400"><input type="checkbox" id="m-force"> 已有平台菜單的日子也重新查詢（手動菜色會保留）</label>
 <button id="m-go">同步這段期間（只查平日）</button><button class="g r" id="m-stop" style="display:none">停止</button><div id="m-o">${mm.msg}</div>
 <div class="row" style="margin-top:10px"><div><label>已存菜單</label><select id="m-mon">${months.map(m => `<option value="${m}" ${m == mm.mon ? "selected" : ""}>${m.replace("-", " 年 ")} 月</option>`).join("") || "<option>尚無</option>"}</select></div></div>
-<div class="tb-w"><table class="tb"><tr><th>日期</th><th>菜色</th><th>來源</th><th>平台照片</th><th></th></tr>${menus.map(m => { let n = 0; try { n = JSON.parse(m["平台照片"] || "[]").length; } catch (e) {} const on = m["顯示照片"] != "否";
-  return `<tr><td style="white-space:nowrap">${md(m["日期"])}（${wd(m["日期"])}）</td><td>${E(m["菜色"])}</td><td>${E(m["來源"])}</td><td style="white-space:nowrap">${n ? n + " 張・" + (on ? "顯示" : "不顯示") : "—"}</td><td style="white-space:nowrap"><button class="g" data-me="${m["日期"]}">✏️ 改菜色</button>${n ? `<button class="g" data-mp="${m["日期"]}" data-v="${on ? 0 : 1}">${on ? "隱藏照片" : "顯示照片"}</button>` : ""}</td></tr>`; }).join("") || '<tr><td colspan="5" class="mu">尚無菜單</td></tr>'}</table></div>`)
+<div class="tb-w"><table class="tb cards"><tr><th>日期</th><th>菜色</th><th>熱量</th><th>平台菜單</th><th>平台照片</th><th></th></tr>${menus.map(m => { let n = 0, nut = null, pl = 0; try { n = JSON.parse(m["平台照片"] || "[]").length; nut = JSON.parse(m["營養"] || "null"); pl = JSON.parse(m["平台菜色"] || "[]").length; } catch (e) {}
+  const sel = (k, v, dis) => `<select data-${k}="${m["日期"]}" ${dis ? "disabled" : ""}>${[["自動", "自動"], ["是", "顯示"], ["否", "不顯示"]].map(([a, b]) => `<option value="${a}" ${(v || "自動") == a ? "selected" : ""}>${b}</option>`).join("")}</select>`;
+  return `<tr><td data-l="日期" style="white-space:nowrap">${md(m["日期"])}（${wd(m["日期"])}）</td><td data-l="菜色">${E(m["菜色"])}${m["來源"] == "幹部" ? ' <span class="chip in">手動</span>' : ""}</td><td data-l="熱量">${nut && nut.cal ? Math.round(nut.cal) + " 大卡" : "—"}</td><td data-l="平台菜單">${pl ? sel("ms", m["顯示菜單"]) : "—"}</td><td data-l="平台照片">${n ? sel("mps", m["顯示照片"]) + ` <span class="mini">${n}張</span>` : "—"}</td><td class="acts"><button class="g" data-me="${m["日期"]}">✏️ 手動菜色</button></td></tr>`; }).join("") || '<tr><td colspan="6" class="mu">尚無菜單</td></tr>'}</table></div>`)
 + fold("rs", "📅 匯入輪值班表與家代名冊", `<p class="mini">選擇「輪值表.xlsx」與「家長代表名冊.xlsx」。檔案只在你的裝置解析，姓名只會存進私有試算表，不會出現在前台。重新匯入會保留每位家代原本的個人連結。</p>
 <label>輪值表</label><input type="file" id="xs" accept=".xlsx,.xls"><label>家長代表名冊</label><input type="file" id="xr" accept=".xlsx,.xls"><button id="xgo">解析並匯入</button>`)
 + fold("v2", "📦 匯入 v2 舊資料", `<p class="mini">把 v2 的「試菜」「反映」分頁搬進 v3（全部以已上線匯入）。</p><label style="font-weight:400"><input type="checkbox" id="mg-f"> 強制匯入（v3 已有資料時）</label><button id="mg">匯入舊資料</button>`)
@@ -258,16 +298,17 @@ function bindSet() {
     const r = await api("rs_import", { roster: res.roster, schedule: res.schedule }); await reload(); return r; }, r => r ? `✅ 新增 ${r.added} 位、更新 ${r.updated} 位，班表 ${r.schedule} 筆` : "", $("xgo"));
   $("mg").onclick = () => run(async () => { const r = await api("migrate_v2", { force: $("mg-f").checked }); await reload(); return r; }, r => `✅ 已匯入紀錄 ${r.records} 筆、議題 ${r.issues} 則`, $("mg"));
   const detail = r => `<details><summary class="mini">技術細節（平日也失敗時，請把這段貼給開發者）</summary><pre>${E([...(r.log || []), ...(r.clog || [])].join("\n"))}\n\n${E(r.raw || "")}</pre></details>`;
-  const showM = r => r.dishes && !r.failed ? `<p class="msg ok">✅ ${md(r.date)}：${E(r.dishes)}（${E(r.source)}${r.via ? "，由這台裝置的瀏覽器取得" : ""}${r.kept ? "，保留手動菜色" : ""}；平台照片 ${r.pics.length} 張）</p>${H.moeGal(r.pics, false)}`
+  const showM = r => r.plat.length && !r.failed ? `<p class="msg ok">✅ ${md(r.date)}：${E(r.dishes)}（${r.via ? "由這台裝置的瀏覽器取得" : "由伺服器取得"}${r.source == "幹部" ? "，保留手動菜色" : ""}；平台照片 ${r.pics.length} 張）</p>${H.platMenu(r.plat)}${H.nutHtml(r.nut)}${H.moeGal(r.pics, false)}`
     : `<p class="msg er">⚠️ 沒有取得 ${md(r.date)} 的菜單（假日，或平台沒有這天的資料）。</p>${detail(r)}`;
   $("m-f").onchange = e => mm.from = e.target.value; $("m-t").onchange = e => mm.to = e.target.value;
   $("m-stop").onclick = () => { mm.stop = true; };
   $("m-go").onclick = async () => { const ds = weekdays(mm.from, mm.to); if (!ds.length) return toast("這段期間沒有平日，請確認起訖日期", 1); if (ds.length > 150) return toast("一次最多 150 個平日，請分段同步", 1);
-    const force = $("m-force").checked, have = new Set(S.menu.filter(m => m["菜色"]).map(m => m["日期"])), fail = []; let ok = 0, skip = 0, last = null, lastFail = null; mm.stop = false;
+    const force = $("m-force").checked, withIng = $("m-ing").checked, setM = $("m-sm").value, setP = $("m-sp").value, have = new Set(S.menu.filter(m => m["平台菜色"] && m["平台菜色"] != "[]").map(m => m["日期"])), fail = []; let ok = 0, skip = 0, last = null, lastFail = null; mm.stop = false;
     $("m-go").disabled = true; $("m-stop").style.display = "";
     for (let i = 0; i < ds.length && !mm.stop; i++) { const d = ds[i], o = $("m-o"); if (o) o.innerHTML = `<p class="msg">同步中 ${i + 1}/${ds.length}（${md(d)}）… 新取得 ${ok}、原本已有 ${skip}、沒有 ${fail.length}</p>`;
-      if (!force && have.has(d)) { skip++; continue; }
-      try { last = await getMenu(d, force); if (last.dishes && !last.failed) ok++; else { fail.push(d); lastFail = last; } } catch (e) { fail.push(d); } }
+      const setSw = async () => { if (setM || setP) await api("menu_set", Object.assign({ date: d }, setM ? { showMenu: setM } : {}, setP ? { showPics: setP } : {})); };
+      if (!force && have.has(d)) { skip++; try { await setSw(); } catch (e) {} continue; }
+      try { last = await getMenu(d, force, withIng); if (last.plat.length && !last.failed) { ok++; await setSw(); } else { fail.push(d); lastFail = last; } } catch (e) { fail.push(d); } }
     mm.msg = ds.length == 1 && last ? showM(last) : `<p class="msg ${ok || skip ? "ok" : "er"}">${mm.stop ? "已停止。" : "完成。"}新取得 ${ok} 天、原本已有 ${skip} 天、沒有取得 ${fail.length} 天${fail.length ? `（${fail.slice(0, 20).map(md).join("、")}${fail.length > 20 ? "…" : ""}）` : ""}</p>${lastFail ? detail(lastFail) : ""}`;
     if (ok && mm.from) mm.mon = (ds.find(d => !fail.includes(d)) || mm.from).slice(0, 7);
     try { await reload(); } catch (e) { toast("⚠️ " + e.message, 1); } };
@@ -279,11 +320,17 @@ pane.addEventListener("click", async e => { const t = e.target;
   if (t.closest("[data-a]") && t.closest(".rv")) return recAct(t.closest("[data-a]"));
   const sg = t.closest(".seg button"); if (sg) { const k = sg.parentNode.dataset.seg, v = sg.dataset.v; if (k == "pre") dly.pre = v; if (k == "sf") sts.f = v; if (k == "sper") sts.per = v; if (k == "ssort") sts.sort = v;
     const T = S.today, mon = H.monday(T), m1 = T.slice(0, 8) + "01", eom = d => H.addDays(H.addDays(d.slice(0, 8) + "28", 4).slice(0, 8) + "01", -1);
+    if (k == "ld") lk.d = { today: T, tmr: H.addDays(T, 1), clear: "" }[v];
     if (k == "rq") [rf.from, rf.to] = { today: [T, T], week: [mon, H.addDays(mon, 6)], month: [m1, eom(T)], clear: ["", ""] }[v];
     if (k == "mq") { const pm = H.addDays(m1, -1), y = +T.slice(0, 4), mo = +T.slice(5, 7); [mm.from, mm.to] = { d1: [T, T], d14: [H.addDays(T, -13), T], d30: [H.addDays(T, -29), T], mon: [m1, T], pmon: [pm.slice(0, 8) + "01", pm], sem: [mo >= 8 ? y + "-09-01" : mo == 1 ? (y - 1) + "-09-01" : y + "-02-01", T] }[v]; mm.msg = ""; }
     return render(); }
   const th = t.closest("th[data-sort]"); if (th) { const k = th.dataset.sort; if (sts.sort == k) sts.dir *= -1; else { sts.sort = k; sts.dir = /done|miss|sched|last/.test(k) ? -1 : 1; } return render(); }
   if (t.dataset.me) { const m = S.menu.find(x => x["日期"] == t.dataset.me), v = prompt(`修改 ${md(t.dataset.me)} 的菜色（用「、」分隔）`, m ? m["菜色"] : ""); if (v != null && v.trim()) run(async () => { await api("menu_set", { date: t.dataset.me, dishes: v.trim(), source: "幹部" }); await reload(); }, "已更新菜色"); return; }
+  if (t.dataset.qr) { const r = repOf(t.dataset.qr), d = qrDate(r["姓名"]); return qrModal(qrCard(r, d), `QR_${d}_${r["班級"].replace(/\//g, "-")}_${r["姓名"]}.png`, `${d} 試菜代表 ${r["班級"]} ${r["姓名"]}`); }
+  if (t.dataset.act == "dayqr" || t.dataset.act == "todayqr") { const d = t.dataset.act == "todayqr" ? S.today : lk.d, ns = [...new Set(S.schedule.filter(x => x.d == d).map(x => x.n))], rs = ns.map(repOf).filter(Boolean).sort((a, b) => cmpCls(a["班級"], b["班級"]));
+    if (!rs.length) return toast("這天沒有排班的家代", 1); return qrModal(qrSheet(rs, d), `QR_${d}_試菜代表.png`, `${d} 營養午餐試菜代表`); }
+  if (t.dataset.act == "resetall") { const v = prompt(`將重設全部 ${S.roster.length} 位家代的連結與 QR Code，舊的立即失效。\n確定請輸入「重設」：`); if (v == null) return; if (v.trim() != "重設") return toast("輸入不正確，未重設", 1);
+    return run(async () => { const r = await api("rep_reset_all", {}); await reload(); return r; }, r => `✅ 已重設 ${r.count} 位的連結，請重新傳送新的 QR Code`, t); }
   if (t.dataset.mp) return run(async () => { await api("menu_set", { date: t.dataset.mp, showPics: t.dataset.v == "1" }); await reload(); }, "已更新");
   const g = t.closest("[data-go]"); if (g && !t.closest("button")) { rf.q = g.dataset.go; rf.s = rf.from = rf.to = ""; return go("rec"); }
   const act = t.dataset.act;
@@ -314,10 +361,12 @@ pane.addEventListener("input", e => { const t = e.target, i = t.closest(".card2"
 pane.addEventListener("change", e => { const t = e.target, i = t.closest(".card2")?.dataset.i;
   if (t.dataset.d && i != null) { dn[i][t.dataset.d] = t.value; drawDone(); }
   ({ "r-from": () => { rf.from = t.value; render(); }, "r-to": () => { rf.to = t.value; render(); }, "m-mon": () => { mm.mon = t.value; render(); }, "r-s": () => { rf.s = t.value; render(); }, "s-sort": () => { sts.sort = t.value; render(); }, "s-grade": () => { sts.grade = t.value; render(); }, "s-f": () => { sts.f = t.value; render(); }, "s-per": () => { sts.per = t.value; render(); },
-    "l-grade": () => { lk.grade = t.value; render(); }, "l-f": () => { lk.f = t.value; render(); }, "l-sort": () => { lk.sort = t.value; render(); }, "y-miss": () => { dly.miss = t.checked; render(); } }[t.id] || (() => {}))(); });
+    "l-grade": () => { lk.grade = t.value; render(); }, "l-d": () => { lk.d = t.value; render(); }, "l-f": () => { lk.f = t.value; render(); }, "l-sort": () => { lk.sort = t.value; render(); }, "y-miss": () => { dly.miss = t.checked; render(); } }[t.id] || (() => {}))(); });
 pane.addEventListener("toggle", e => { const t = e.target;
   if (t.dataset && t.dataset.fold) { t.open ? folds.add(t.dataset.fold) : folds.delete(t.dataset.fold); try { localStorage.setItem("dmpa_fold", JSON.stringify([...folds])); } catch (x) {} }
   if (t.dataset && t.dataset.rid) t.open ? openRec.add(t.dataset.rid) : openRec.delete(t.dataset.rid); }, true);
 addEventListener("scroll", () => { $("top").style.display = scrollY > 700 ? "block" : "none"; }, { passive: true });
 $("top").onclick = () => scrollTo({ top: 0, behavior: "smooth" });
+pane.addEventListener("change", e => { const t = e.target; const d = t.dataset.ms || t.dataset.mps; if (!d) return;
+  run(async () => { await api("menu_set", Object.assign({ date: d }, t.dataset.ms ? { showMenu: t.value } : { showPics: t.value })); await reload(); }, `已更新 ${md(d)} 的顯示設定`); });
 })();

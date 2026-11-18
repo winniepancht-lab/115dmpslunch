@@ -15,6 +15,9 @@ const { $, E, md, wd } = H;
   let h = `<h1>📄 營養午餐週報 <small>${md(k)}（一）– ${md(end)}（五）</small></h1><p class="mu">東門國小家長會・由家長代表每天試菜記錄，本頁依試算表資料自動產生。</p>`;
   if (!D.length && !Q.length) { $("rep").innerHTML = h + `<div class="empty">🌱 這一週還沒有紀錄</div>`; return; }
   h += `<div class="st"><div><b>${D.length}/5</b>試菜天數</div><div><b>${D.reduce((a, x) => a + x.reps.length, 0)}</b>✏️ 代表回報</div><div><b>${photos.length}</b>📷 照片</div><div><b>${Q.length}</b>💬 本週反映</div><div><b>${open.length}</b>⏳ 追蹤中（累計）</div></div>`;
+  const NU = D.filter(x => x.nut && x.nut.cal);
+  if (NU.length) { const av = k => (NU.reduce((a, x) => a + (+x.nut[k] || 0), 0) / NU.length), f1 = v => (+v || 0).toFixed(1).replace(/\.0$/, "");
+    h += `<h2>本週營養份量 <span class="mini">資料來源：教育部校園食材登錄平台</span></h2><div class="tb-w"><table class="tb"><tr><th>日期</th><th>熱量（大卡）</th><th>全穀雜糧</th><th>豆魚蛋肉</th><th>蔬菜</th><th>水果</th><th>乳品</th></tr>${NU.map(x => `<tr><td>${md(x.d)}（${wd(x.d)}）</td><td><b>${Math.round(x.nut.cal)}</b></td><td>${f1(x.nut.g)}</td><td>${f1(x.nut.m)}</td><td>${f1(x.nut.v)}</td><td>${f1(x.nut.f)}</td><td>${f1(x.nut.k)}</td></tr>`).join("")}<tr class="avg"><td>平均</td><td><b>${Math.round(av("cal"))}</b></td><td>${f1(av("g"))}</td><td>${f1(av("m"))}</td><td>${f1(av("v"))}</td><td>${f1(av("f"))}</td><td>${f1(av("k"))}</td></tr></table></div><p class="mini">單位：份（依衛福部每日飲食指南的份量計算），僅統計有平台資料的日子。</p>`; }
   if (kw.total) h += `<h2>本週回饋關鍵字</h2><div class="kw">${kw.bad.length ? kw.bad.map(([n, c]) => `<span>${n} × ${c}</span>`).join("") : `<span class="g">沒有偏鹹、偏乾等負面關鍵字 🎉</span>`}${kw.good ? `<span class="g">好評關鍵字 × ${kw.good}</span>` : ""}</div><p class="mu">依代表文字自動統計，僅供參考；共 ${kw.total} 則評語。</p>`;
   if (Q.length) h += `<h2>本週反映與校方回覆</h2><div class="qa">${Q.map(q => H.qaCard(q, true)).join("")}</div>`;
   const pend = open.filter(q => H.monday(q.d) != k);

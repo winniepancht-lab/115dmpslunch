@@ -61,10 +61,12 @@ H.build = (lunch, qa) => {
   const M = {}, sem = d => { const i = H.semInfo(d); return M[i.id] || (M[i.id] = { id: i.id, name: i.name, t: i.t, dm: {}, qa: [] }); };
   lunch.filter(r => !hidden(r)).forEach(r => {
     const d = H.norm(r["日期"]); if (!d) return;
-    const s = sem(d), x = s.dm[d] || (s.dm[d] = { d, menu: "", msrc: "", mp: [], mi: [], reps: [], ph: [], n: [] });
+    const s = sem(d), x = s.dm[d] || (s.dm[d] = { d, menu: "", msrc: "", mp: [], plat: [], nut: null, ing: [], mi: [], reps: [], ph: [], n: [] });
     const menu = String(r["午餐菜色"] || "").trim(); if (menu && !x.menu) x.menu = menu;
     if (r["菜單來源"] && !x.msrc) x.msrc = r["菜單來源"];
-    if (r["平台照片"] && !x.mp.length) { try { x.mp = JSON.parse(r["平台照片"]) || []; } catch (e) {} }
+    const js = (k, d) => { try { return r[k] ? JSON.parse(r[k]) : d; } catch (e) { return d; } };
+    if (!x.mp.length) x.mp = js("平台照片", []).map(p => Object.assign({}, p, { u: H.picUrl(p.u) }));
+    if (!x.plat.length) x.plat = js("平台菜色", []); if (!x.nut) x.nut = js("營養", null); if (!x.ing.length) x.ing = js("食材", []);
     x.mi.push(...H.urls(r["菜單圖片"])); x.ph.push(...H.urls(r["照片連結"]));
     const l = String(r["家代意見反饋"] || "").split("\n").map(v => v.trim()).filter(Boolean);
     if (l.length) x.reps.push({ c: H.grade(r["班級"]), l });
@@ -101,39 +103,54 @@ H.openLb = (list, i) => {
 };
 document.addEventListener("click", e => { const a = e.target.closest(".gal a"); if (!a) return; e.preventDefault(); const as = [...a.parentNode.querySelectorAll("a")]; H.openLb(as.map(x => x.href), as.indexOf(a)); });
 
-// ---- 教育部校園食材登錄平台：菜色照片與瀏覽器端查詢 ----
+// ---- 教育部校園食材登錄平台（2026/11 依實際回傳格式撰寫；平台允許跨網域讀取）----
 H.MOE = "https://fatraceschool.k12ea.gov.tw"; H.SCHOOL_ID = C.SCHOOL_ID || "353606";
 H.MOE_PAGE = H.MOE + "/frontend/search.html?school=" + H.SCHOOL_ID;
+const SRC_LINK = `<a href="${H.MOE_PAGE}" target="_blank" rel="noopener">教育部校園食材登錄平台</a>`;
+H.picUrl = u => { u = String(u || ""); const m = u.match(/\/mnt\/hdb\/.*_(\d+)\.\w*$/); return m ? H.MOE + "/dish/pic/" + m[1] : u; };
+// 平台照片載入後檢查：484×476 是平台「無照片」預設圖，壞圖也一併移除
+H.moeOk = img => { if (img.naturalWidth == 484 && img.naturalHeight == 476) H.moeErr(img); };
 H.moeErr = img => { const a = img.closest("a"), box = img.closest(".moe"); if (a) a.remove(); if (box && !box.querySelector(".gal a")) box.remove(); };
+const TYPE_ICON = { "主食": "🍚", "主菜": "🍗", "副菜": "🥚", "蔬菜": "🥬", "湯品": "🍲", "點心": "🍪", "水果": "🍎", "飲品": "🥛" };
 // 平台菜色照片（明確標示來源，非家代拍攝）；note=false 時只出圖
-H.moeGal = (pics, note) => pics && pics.length ? `<div class="moe">${note === false ? "" : `<div class="sec">🏫 平台菜色照片 <span class="src">取自<a href="${H.MOE_PAGE}" target="_blank" rel="noopener">教育部校園食材登錄平台</a>，非家代現場拍攝</span></div>`}<div class="gal moeg">${pics.map(p => `<a href="${H.E(p.u)}"><img src="${H.E(p.u)}" alt="${H.E(p.n)}" loading="lazy" decoding="async" referrerpolicy="no-referrer" onerror="H.moeErr(this)"><span class="cap">${H.E(p.n)}</span></a>`).join("")}</div></div>` : "";
-const DISH_KEY = /^(dish_?name|menu_?name|food_?name|recipe_?name|meal_?name|菜名|菜色|品名|食譜名稱)$/i;
-H.moeDishes = (o, out = []) => {
-  if (Array.isArray(o)) o.forEach(x => H.moeDishes(x, out));
-  else if (o && typeof o == "object") { let name = "", id = "", pic = "";
-    for (const k in o) { const v = o[k];
-      if (typeof v == "string" && DISH_KEY.test(k)) name = v.trim();
-      else if (/^dish_?id$/i.test(k) && (typeof v == "string" || typeof v == "number")) id = String(v);
-      else if (typeof v == "string" && /(pic|image|photo|img)/i.test(k) && /^(https?:\/\/|\/)/.test(v)) pic = v[0] == "/" ? H.MOE + v : v;
-      else if (v && typeof v == "object") H.moeDishes(v, out); }
-    if (name && !out.some(d => d.n == name)) out.push({ n: name, u: pic || (id ? H.MOE + "/dish/pic/" + id : "") }); }
-  return out; };
-const findKeys = (o, re, out = []) => { if (Array.isArray(o)) o.forEach(x => findKeys(x, re, out)); else if (o && typeof o == "object") for (const k in o) { if (re.test(k) && /string|number/.test(typeof o[k])) out.push(String(o[k])); else findKeys(o[k], re, out); } return out; };
-// 由使用者的瀏覽器直接向平台查詢（伺服器查不到時的備援）
-H.moeFetch = async date => { const log = [];
+H.moeGal = (pics, note) => pics && pics.length ? `<div class="moe">${note === false ? "" : `<div class="sec">🏫 平台菜色照片 <span class="src">取自${SRC_LINK}，非家代現場拍攝</span></div>`}<div class="gal moeg">${pics.map(p => `<a href="${H.E(p.u)}"><img src="${H.E(p.u)}" alt="${H.E(p.n)}（平台照片）" loading="lazy" decoding="async" referrerpolicy="no-referrer" onload="H.moeOk(this)" onerror="H.moeErr(this)"><span class="cap">${p.t ? H.E(p.t) + "・" : ""}${H.E(p.n)}</span></a>`).join("")}</div></div>` : "";
+// 菜單：有平台菜色就依類別列出
+H.platMenu = plat => `<ul class="dishes">${plat.map(d => `<li><span class="dt">${TYPE_ICON[d.t] || "🍴"} ${H.E(d.t || "菜色")}</span>${H.E(d.n)}</li>`).join("")}</ul>`;
+const NUT = [["cal", "熱量", "大卡"], ["g", "全穀雜糧", "份"], ["m", "豆魚蛋肉", "份"], ["v", "蔬菜", "份"], ["o", "油脂", "份"], ["k", "乳品", "份"], ["f", "水果", "份"]];
+H.nutHtml = n => n ? `<div class="nut">${NUT.filter(([k]) => n[k] > 0).map(([k, l, u]) => `<span class="${k == "cal" ? "cal" : ""}"><b>${k == "cal" ? Math.round(n[k]) : (+n[k]).toFixed(1).replace(/\.0$/, "")}</b> ${u}<small>${l}</small></span>`).join("")}</div>` : "";
+H.ingHtml = ing => ing && ing.length ? `<details class="ing"><summary>🥬 食材與產地 <span class="src">資料來源：${SRC_LINK}</span></summary><ul>${ing.map(d => `<li><b>${H.E(d.n)}</b>：${d.i.map(([a, o, c]) => H.E(a) + (o ? `<small>（${H.E(o)}）</small>` : "") + (c ? `<span class="cert">${H.E(c)}</span>` : "")).join("、")}</li>`).join("")}</ul></details>` : "";
+// 由使用者的瀏覽器直接向平台查詢：菜色（含類別、照片）、營養、食材
+H.moeFetch = async (date, withIng = true) => { const log = [];
   const get = async u => { const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 9000);
-    try { const r = await fetch(u, { headers: { Accept: "application/json" }, signal: ac.signal }); log.push(r.status + " " + u); return await r.json(); }
+    try { const r = await fetch(H.MOE + u, { headers: { Accept: "application/json" }, signal: ac.signal }); log.push(r.status + " " + u); return await r.json(); }
     catch (e) { throw new Error(e.name == "AbortError" ? "平台回應逾時" : e.message); } finally { clearTimeout(tm); } };
-  try { const j = await get(`${H.MOE}/offered/meal?KitchenId=all&MenuType=1&period=${date}&SchoolId=${H.SCHOOL_ID}`); let dishes = H.moeDishes(j);
-    if (!dishes.length) for (const id of findKeys(j, /^batchdataid$/i)) { dishes = H.moeDishes(await get(`${H.MOE}/dish?BatchDataId=${encodeURIComponent(id)}`)); if (dishes.length) break; }
-    return { dishes, log };
-  } catch (e) { log.push("瀏覽器查詢失敗：" + e.message); return { dishes: [], log }; } };
-H.dishTpl = menu => { const d = String(menu || "").split(/[、，,\n]+/).map(s => s.trim()).filter(Boolean); return (d.length ? d : ["白飯", "主菜", "副菜", "青菜", "湯"]).map(x => x + "：").join("\n") + "\n整體："; };
+  try {
+    const meal = await get(`/offered/meal?KitchenId=all&MenuType=1&period=${date}&SchoolId=${H.SCHOOL_ID}`), bs = (meal && meal.data) || [];
+    if (!bs.length) return { dishes: [], nut: null, ing: [], log };
+    const nut = {}; [["TypeGrains", "g"], ["TypeMeatBeans", "m"], ["TypeVegetable", "v"], ["TypeOil", "o"], ["TypeMilk", "k"], ["TypeFruit", "f"], ["Calorie", "cal"]].forEach(([a, b]) => { const v = parseFloat(bs[0][a]); if (!isNaN(v)) nut[b] = v; });
+    const dishes = [];
+    for (const b of bs) { const ds = ((await get(`/dish?BatchDataId=${encodeURIComponent(b.BatchDataId)}`)).data || []).filter(d => d.DishName && d.DishType && d.DishName != "調味料").sort((a, c) => (a.DishOrder || 0) - (c.DishOrder || 0));
+      ds.forEach(d => { if (!dishes.some(x => x.n == d.DishName)) dishes.push({ n: String(d.DishName).trim(), t: d.DishType || "", u: d.DishId ? H.MOE + "/dish/pic/" + d.DishId : "", id: String(d.DishId || ""), b: String(b.BatchDataId) }); }); }
+    const ing = [];
+    if (withIng) await Promise.all(dishes.filter(d => d.id).map(async d => { try {
+      const l = ((await get(`/ingredient?BatchDataId=${d.b}&DishId=${d.id}`)).data || []).map(x => [String(x.IngredientName || "").trim(), String(x.IngredientSourceNameList || "").trim(), (x.Certification || []).map(c => c.SourceCertification).filter(Boolean).join("/")]).filter(x => x[0]);
+      if (l.length) ing.push({ n: d.n, i: l }); } catch (e) { log.push("食材讀取失敗：" + d.n); } }));
+    ing.sort((a, b) => dishes.findIndex(d => d.n == a.n) - dishes.findIndex(d => d.n == b.n));
+    return { dishes, nut: Object.keys(nut).length ? nut : null, ing, log };
+  } catch (e) { log.push("瀏覽器查詢失敗：" + e.message); return { dishes: [], nut: null, ing: [], log }; } };
+// 填寫範本：有平台菜色就依菜名（附類別），否則一般範本
+H.dishTpl = menu => { const list = Array.isArray(menu) ? menu.map(d => d.t ? `${d.n}（${d.t}）` : d.n) : String(menu || "").split(/[、，,\n]+/).map(s => s.trim()).filter(Boolean);
+  return (list.length ? list : ["白飯", "主菜", "副菜", "青菜", "湯"]).map(x => x + "：").join("\n") + "\n整體："; };
+// 「插入範本」：內容是空的或仍是上一次的範本就直接取代；有自己寫的內容才先確認
+H.putTpl = (ta, tpl) => { const cur = ta.value.trim(); if (cur && cur != (ta.dataset.tpl || "").trim() && !confirm("要用新的範本取代目前已填寫的內容嗎？")) return false;
+  ta.value = tpl; ta.dataset.tpl = tpl; ta.focus(); return true; };
+H.isTpl = ta => !ta.value.trim() || ta.value.trim() == (ta.dataset.tpl || "").trim();
 
 // 每日卡 / 反映卡（首頁與週報共用）
-H.dayCard = x => `<section class="day" id="d-${x.d.slice(5, 7)}${x.d.slice(8, 10)}"><div class="dh"><div class="badge">${H.md(x.d)}<small>週${H.wd(x.d)}</small></div></div>
-${x.menu ? `<div class="menu">📋 <b>今日菜色</b>　${H.E(x.menu)}${x.msrc == "教育局" ? `<span class="src">資料來源：<a href="${H.MOE_PAGE}" target="_blank" rel="noopener">教育部校園食材登錄平台</a></span>` : ""}</div>` : ""}${x.mi.length ? H.gal(x.mi, "menus") : ""}
-${x.ph.length ? `<div class="sec">📷 試菜照片</div>${H.gal(x.ph)}` : H.moeGal(x.mp)}
+H.dayCard = x => `<section class="day" id="d-${x.d.slice(5, 7)}${x.d.slice(8, 10)}"><div class="dh"><div class="badge">${H.md(x.d)}<small>週${H.wd(x.d)}</small></div>${x.nut && x.nut.cal ? `<span class="kcal">🔥 ${Math.round(x.nut.cal)} 大卡</span>` : ""}</div>
+${x.plat.length ? `<div class="menu">📋 <b>今日菜色</b><span class="src">資料來源：${SRC_LINK}</span>${H.platMenu(x.plat)}${H.nutHtml(x.nut)}${H.ingHtml(x.ing)}</div>`
+  : x.menu ? `<div class="menu">📋 <b>今日菜色</b>　${H.E(x.menu)}${x.msrc == "教育局" ? `<span class="src">資料來源：${SRC_LINK}</span>` : ""}</div>` : ""}${x.mi.length ? H.gal(x.mi, "menus") : ""}
+${x.ph.length ? `<div class="realbox"><div class="sec">📷 家代現場實拍 <span class="src">由當天試菜的家長代表拍攝（${x.ph.length} 張）</span></div>${H.gal(x.ph, "real")}</div>` : ""}${H.moeGal(x.mp)}
 ${x.reps.length ? `<div class="sec">✏️ 代表試菜紀錄</div>` + x.reps.map(r => `<div class="rep"><strong>${H.E(r.c)}</strong><ul>${r.l.map(l => `<li>${H.E(l)}</li>`).join("")}</ul></div>`).join("") : ""}
 ${x.n.map(n => `<div class="bub"><div class="av">🥗</div><div class="tx"><b>校方／營養師回應</b><br>${H.E(n)}</div></div>`).join("")}</section>`;
 H.qaCard = (q, open) => `<details class="qi ${q.s == "追蹤中" ? "wait" : q.s == "已回覆" ? "ok" : ""}"${open ? " open" : ""}><summary>${H.chip(q.s)}<b>${H.E(q.t)}</b><span class="d">${H.md(q.d)}</span></summary>
