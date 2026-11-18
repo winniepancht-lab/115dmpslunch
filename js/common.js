@@ -150,7 +150,7 @@ H.isTpl = ta => !ta.value.trim() || ta.value.trim() == (ta.dataset.tpl || "").tr
 H.dayCard = x => `<section class="day" id="d-${x.d.slice(5, 7)}${x.d.slice(8, 10)}"><div class="dh"><div class="badge">${H.md(x.d)}<small>週${H.wd(x.d)}</small></div>${x.nut && x.nut.cal ? `<span class="kcal">🔥 ${Math.round(x.nut.cal)} 大卡</span>` : ""}</div>
 ${x.plat.length ? `<div class="menu">📋 <b>今日菜色</b><span class="src">資料來源：${SRC_LINK}</span>${H.platMenu(x.plat)}${H.nutHtml(x.nut)}${H.ingHtml(x.ing)}</div>`
   : x.menu ? `<div class="menu">📋 <b>今日菜色</b>　${H.E(x.menu)}${x.msrc == "教育局" ? `<span class="src">資料來源：${SRC_LINK}</span>` : ""}</div>` : ""}${x.mi.length ? H.gal(x.mi, "menus") : ""}
-${x.ph.length ? `<div class="realbox"><div class="sec">📷 家代現場實拍 <span class="src">由當天試菜的家長代表拍攝（${x.ph.length} 張）</span></div>${H.gal(x.ph, "real")}</div>` : ""}${H.moeGal(x.mp)}
+${H.moeGal(x.mp)}${x.ph.length ? `<div class="realbox"><div class="sec">📷 家代現場實拍 <span class="src">由當天試菜的家長代表拍攝（${x.ph.length} 張）</span></div>${H.gal(x.ph, "real")}</div>` : ""}
 ${x.reps.length ? `<div class="sec">✏️ 代表試菜紀錄</div>` + x.reps.map(r => `<div class="rep"><strong>${H.E(r.c)}</strong><ul>${r.l.map(l => `<li>${H.E(l)}</li>`).join("")}</ul></div>`).join("") : ""}
 ${x.n.map(n => `<div class="bub"><div class="av">🥗</div><div class="tx"><b>校方／營養師回應</b><br>${H.E(n)}</div></div>`).join("")}</section>`;
 H.qaCard = (q, open) => `<details class="qi ${q.s == "追蹤中" ? "wait" : q.s == "已回覆" ? "ok" : ""}"${open ? " open" : ""}><summary>${H.chip(q.s)}<b>${H.E(q.t)}</b><span class="d">${H.md(q.d)}</span></summary>

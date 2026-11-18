@@ -104,9 +104,7 @@ details>*{box-sizing:border-box}
 .cert{display:inline-block;margin-left:3px;font-size:.68rem;background:#d9f5e3;color:#1d6b43;border-radius:6px;padding:0 4px}
 .kcal{margin-left:auto;font-size:.85rem;background:#fff4ef;border:2px solid #f7b9a6;border-radius:99px;padding:0 10px;color:#a8471c}
 .realbox{border:2px solid #8fdcae;background:#f3fbf6;border-radius:16px;padding:6px 10px 10px;margin:8px 0}.realbox .sec{margin-top:4px;color:#1d6b43}
-.gal.real a{position:relative}.gal.real a:after{content:"📷 家代實拍";position:absolute;left:6px;top:6px;background:#1d6b43;color:#fff;font-size:.7rem;border-radius:8px;padding:1px 7px}
-.gal.moeg a:after{content:"平台";position:absolute;left:6px;top:6px;background:#24508f;color:#fff;font-size:.68rem;border-radius:8px;padding:1px 6px}
-.hello{font-size:1.05rem;margin:10px 0}.duty{background:var(--sk);border-radius:12px;padding:6px 12px;margin:6px 0}
+.gal.real a{position:relative}.hello{font-size:1.05rem;margin:10px 0}.duty{background:var(--sk);border-radius:12px;padding:6px 12px;margin:6px 0}
 .mbox .opts{margin-top:8px;border-top:1px dashed #e8d48a;padding-top:6px}.mbox .opts label{display:block;font-weight:400;margin:4px 0}.mbox .pv summary{cursor:pointer;margin-top:4px}
 #qrm{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;z-index:70;padding:14px}#qrm.on{display:flex}
 #qrm .box{background:#fff;border-radius:20px;padding:12px;max-width:min(96vw,560px);max-height:94vh;overflow:auto;text-align:center}#qrm img{max-width:100%;max-height:70vh;border-radius:12px;display:block;margin:0 auto}
